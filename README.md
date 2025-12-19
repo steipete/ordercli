@@ -18,6 +18,7 @@ Bundled presets (from the APK):
 ```sh
 ./foodoracli countries
 ./foodoracli config set --country HU
+./foodoracli config set --country AT
 ./foodoracli config show
 ```
 
@@ -38,7 +39,29 @@ export FOODORA_CLIENT_SECRET='...'
 ./foodoracli login --email you@example.com --password-stdin
 ```
 
-If MFA triggers, rerun with the printed `--mfa-token` and pass `--otp <CODE>`.
+If MFA triggers, `foodoracli` stores the MFA token locally and prints a safe retry command. Rerun with `--otp <CODE>`.
+
+### Client headers
+
+Some regions (e.g. Austria/mjam `mj.fd-api.com`) expect app-style headers like `X-FP-API-KEY` / `App-Name` / app `User-Agent`. `foodoracli` uses an app-like header profile for `AT` by default.
+
+For corporate flows, you can override the OAuth `client_id`:
+
+```sh
+./foodoracli login --email you@example.com --client-id corp_android --password-stdin
+```
+
+### Cloudflare / bot protection
+
+Some regions (e.g. Austria/mjam `mj.fd-api.com`) may return Cloudflare HTML (`HTTP 403`) for plain Go HTTP clients.
+
+Use an interactive Playwright session (you solve the challenge in the opened browser window; no auto-bypass):
+
+```sh
+./foodoracli login --email you@example.com --password-stdin --browser
+```
+
+Prereqs: `node` + `npx` available. First run may download Playwright + Chromium.
 
 ## Orders
 
