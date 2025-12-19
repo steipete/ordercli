@@ -66,8 +66,8 @@ func OAuthTokenPassword(ctx context.Context, req foodora.OAuthPasswordRequest, o
 	if _, err := exec.LookPath("node"); err != nil {
 		return foodora.AuthToken{}, nil, Session{}, errors.New("browserauth: node not found")
 	}
-	if _, err := exec.LookPath("npx"); err != nil {
-		return foodora.AuthToken{}, nil, Session{}, errors.New("browserauth: npx not found")
+	if _, err := exec.LookPath("npm"); err != nil {
+		return foodora.AuthToken{}, nil, Session{}, errors.New("browserauth: npm not found")
 	}
 
 	td, err := os.MkdirTemp("", "foodcli-browserauth-*")
@@ -99,8 +99,23 @@ func OAuthTokenPassword(ctx context.Context, req foodora.OAuthPasswordRequest, o
 	cmdCtx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
 
-	// Use `-c` so Node can resolve the `playwright` package installed via `-p`.
-	cmd := exec.CommandContext(cmdCtx, "npx", "-y", "-p", pw, "-c", "node "+scriptPath) //nolint:gosec
+	install := exec.CommandContext(cmdCtx, "npm", "install", "--silent", "--no-progress", "--no-fund", "--no-audit", pw) //nolint:gosec
+	install.Dir = td
+	install.Stdout = io.Discard
+	if opts.LogWriter != nil {
+		install.Stderr = opts.LogWriter
+	} else {
+		install.Stderr = io.Discard
+	}
+	install.Env = append(os.Environ(),
+		"npm_config_loglevel=error",
+	)
+	if err := install.Run(); err != nil {
+		return foodora.AuthToken{}, nil, Session{}, fmt.Errorf("browserauth: npm install %s: %w", pw, err)
+	}
+
+	cmd := exec.CommandContext(cmdCtx, "node", scriptPath) //nolint:gosec
+	cmd.Dir = td
 	cmd.Env = append(os.Environ(),
 		"FOODCLI_OUTPUT_PATH="+outPath,
 		"FOODORACLI_OUTPUT_PATH="+outPath, // legacy
@@ -115,7 +130,7 @@ func OAuthTokenPassword(ctx context.Context, req foodora.OAuthPasswordRequest, o
 	}
 
 	if err := cmd.Run(); err != nil {
-		return foodora.AuthToken{}, nil, Session{}, fmt.Errorf("browserauth: playwright run: %w", err)
+		return foodora.AuthToken{}, nil, Session{}, fmt.Errorf("browserauth: node run: %w", err)
 	}
 
 	ob, err := os.ReadFile(outPath)
