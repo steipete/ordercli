@@ -28,8 +28,9 @@ func newRoot() *cobra.Command {
 	}
 	cmd.PersistentFlags().StringVar(&cfgPath, "config", "", "config path (default: OS config dir)")
 
-	st := &state{configPath: cfgPath}
+	st := &state{}
 	cmd.PersistentPreRunE = func(cmd *cobra.Command, args []string) error {
+		st.configPath = cfgPath
 		return st.load()
 	}
 	cmd.PersistentPostRunE = func(cmd *cobra.Command, args []string) error {

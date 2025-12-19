@@ -4,7 +4,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"regexp"
 	"strconv"
+	"strings"
 )
 
 type HTTPError struct {
@@ -15,11 +17,58 @@ type HTTPError struct {
 }
 
 func (e *HTTPError) Error() string {
-	body := string(e.Body)
+	body := redactSensitive(e.Body)
 	if len(body) > 300 {
 		body = body[:300] + "…"
 	}
 	return fmt.Sprintf("%s %s: HTTP %d: %s", e.Method, e.URL, e.StatusCode, body)
+}
+
+var sensitiveJSONKeys = map[string]struct{}{
+	"access_token":  {},
+	"refresh_token": {},
+	"client_secret": {},
+	"password":      {},
+	"mfa_token":     {},
+	"otp":           {},
+	"x-otp":         {},
+}
+
+var sensitiveJSONValueRE = regexp.MustCompile(`(?i)(\"(?:access_token|refresh_token|client_secret|password|mfa_token|otp)\"\\s*:\\s*)\"[^\"]*\"`)
+
+func redactSensitive(b []byte) string {
+	if len(b) == 0 {
+		return ""
+	}
+
+	var v any
+	if err := json.Unmarshal(b, &v); err == nil {
+		redactAny(v)
+		if out, err := json.Marshal(v); err == nil {
+			return string(out)
+		}
+	}
+
+	// Best-effort: redact common JSON patterns in string bodies.
+	s := string(b)
+	return sensitiveJSONValueRE.ReplaceAllString(s, `$1"***"`)
+}
+
+func redactAny(v any) {
+	switch t := v.(type) {
+	case map[string]any:
+		for k, vv := range t {
+			if _, ok := sensitiveJSONKeys[strings.ToLower(k)]; ok {
+				t[k] = "***"
+				continue
+			}
+			redactAny(vv)
+		}
+	case []any:
+		for i := range t {
+			redactAny(t[i])
+		}
+	}
 }
 
 type MfaChallenge struct {
