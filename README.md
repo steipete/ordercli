@@ -1,6 +1,6 @@
-# ordercli
+# ordercli 🛵
 
-Go CLI: multi-provider food order history + status.
+Your takeout timeline, in the terminal.
 
 Repo: `github.com/steipete/ordercli`
 
