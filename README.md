@@ -1,7 +1,5 @@
 # 🛵 ordercli — Your takeout timeline, in the terminal.
 
-Repo: `github.com/steipete/ordercli`
-
 Providers:
 - `foodora` (working)
 - `deliveroo` (work in progress; requires `DELIVEROO_BEARER_TOKEN`)
