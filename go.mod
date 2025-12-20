@@ -1,4 +1,4 @@
-module github.com/steipete/foodcli
+module github.com/steipete/ordercli
 
 go 1.24.0
 

@@ -20,18 +20,20 @@ func cookieHost(baseURL string) string {
 }
 
 func (s *state) cookieHeaderForBaseURL() (host string, cookie string) {
-	host = cookieHost(s.cfg.BaseURL)
-	if host == "" || len(s.cfg.CookiesByHost) == 0 {
+	cfg := s.foodora()
+	host = cookieHost(cfg.BaseURL)
+	if host == "" || len(cfg.CookiesByHost) == 0 {
 		return host, ""
 	}
-	return host, strings.TrimSpace(s.cfg.CookiesByHost[host])
+	return host, strings.TrimSpace(cfg.CookiesByHost[host])
 }
 
 func (s *state) appHeaders() appHeaderProfile {
+	cfg := s.foodora()
 	p := appHeaderProfile{
 		FPAPIKey: "android",
 	}
-	if strings.EqualFold(s.cfg.TargetCountryISO, "AT") || strings.HasPrefix(strings.ToUpper(s.cfg.GlobalEntityID), "MJM_") || strings.Contains(strings.ToLower(s.cfg.BaseURL), "mj.fd-api.com") {
+	if strings.EqualFold(cfg.TargetCountryISO, "AT") || strings.HasPrefix(strings.ToUpper(cfg.GlobalEntityID), "MJM_") || strings.Contains(strings.ToLower(cfg.BaseURL), "mj.fd-api.com") {
 		p.AppName = "at.mjam"
 		// From the provided at.mjam APKM (v25.3.0 / build 250300134).
 		p.UserAgent = "Android-app-25.3.0(250300134)"

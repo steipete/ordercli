@@ -62,7 +62,7 @@ func LoadCookieHeader(ctx context.Context, opts Options) (Result, error) {
 		return Result{}, err
 	}
 
-	td, err := os.MkdirTemp("", "foodcli-chromecookies-*")
+	td, err := os.MkdirTemp("", "ordercli-chromecookies-*")
 	if err != nil {
 		return Result{}, err
 	}
@@ -85,7 +85,9 @@ func LoadCookieHeader(ctx context.Context, opts Options) (Result, error) {
 	cmd := exec.CommandContext(cmdCtx, "node", scriptPath) //nolint:gosec
 	cmd.Dir = opts.CacheDir
 	cmd.Env = append(os.Environ(),
+		"ORDERCLI_OUTPUT_PATH="+outPath,
 		"FOODCLI_OUTPUT_PATH="+outPath,
+		"FOODORACLI_OUTPUT_PATH="+outPath, // legacy
 		"npm_config_loglevel=error",
 	)
 	cmd.Stdin = bytes.NewReader(b)

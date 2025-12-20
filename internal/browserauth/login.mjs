@@ -1,9 +1,12 @@
 import fs from 'node:fs';
 import { chromium } from 'playwright';
 
-const outputPath = process.env.FOODCLI_OUTPUT_PATH || process.env.FOODORACLI_OUTPUT_PATH;
+const outputPath =
+  process.env.ORDERCLI_OUTPUT_PATH ||
+  process.env.FOODCLI_OUTPUT_PATH ||
+  process.env.FOODORACLI_OUTPUT_PATH;
 if (!outputPath) {
-  process.stderr.write('FOODCLI_OUTPUT_PATH missing\n');
+  process.stderr.write('ORDERCLI_OUTPUT_PATH missing\n');
   process.exit(2);
 }
 
@@ -72,7 +75,7 @@ function perimeterXHTML(baseURL, body) {
   return `<!doctype html>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>foodcli — verification</title>
+<title>ordercli — verification</title>
 <style>
   :root { color-scheme: dark; }
   body { margin: 0; font: 14px/1.5 ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; background: #0b0f14; color: #e8eef7; }
@@ -85,8 +88,8 @@ function perimeterXHTML(baseURL, body) {
 </style>
 <base href="${origin}/" />
 <header>
-  <h1>foodcli verification</h1>
-  <p>Complete the verification below. Once cleared, foodcli will continue automatically.</p>
+  <h1>ordercli verification</h1>
+  <p>Complete the verification below. Once cleared, ordercli will continue automatically.</p>
 </header>
 <main>
   <div class="box">

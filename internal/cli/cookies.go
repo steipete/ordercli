@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"github.com/spf13/cobra"
-	"github.com/steipete/foodcli/internal/chromecookies"
+	"github.com/steipete/ordercli/internal/chromecookies"
 )
 
 func newCookiesCmd(st *state) *cobra.Command {
@@ -32,17 +32,18 @@ func newCookiesChromeCmd(st *state) *cobra.Command {
 		Use:   "chrome",
 		Short: "Import cookies from local Chrome into config (for base_url host)",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if st.cfg.BaseURL == "" {
-				return errors.New("missing base_url (run `foodcli config set --country ...`)")
+			cfg := st.foodora()
+			if cfg.BaseURL == "" {
+				return errors.New("missing base_url (run `ordercli foodora config set --country ...`)")
 			}
-			host := cookieHost(st.cfg.BaseURL)
+			host := cookieHost(cfg.BaseURL)
 			if host == "" {
-				return fmt.Errorf("failed to derive host from base_url=%q", st.cfg.BaseURL)
+				return fmt.Errorf("failed to derive host from base_url=%q", cfg.BaseURL)
 			}
 
 			targetURL := strings.TrimSpace(sourceURL)
 			if targetURL == "" {
-				targetURL = st.cfg.BaseURL
+				targetURL = cfg.BaseURL
 			}
 
 			if u, err := url.Parse(targetURL); err == nil && u.Hostname() != "" && (u.Scheme == "http" || u.Scheme == "https") {
@@ -68,10 +69,10 @@ func newCookiesChromeCmd(st *state) *cobra.Command {
 				return errors.New("no cookies found (are you logged in in Chrome? try --profile \"Default\" / \"Profile 1\" or --cookie-path)")
 			}
 
-			if st.cfg.CookiesByHost == nil {
-				st.cfg.CookiesByHost = map[string]string{}
+			if cfg.CookiesByHost == nil {
+				cfg.CookiesByHost = map[string]string{}
 			}
-			st.cfg.CookiesByHost[strings.ToLower(host)] = res.CookieHeader
+			cfg.CookiesByHost[strings.ToLower(host)] = res.CookieHeader
 			st.markDirty()
 
 			fmt.Fprintf(cmd.OutOrStdout(), "ok host=%s cookies=%d\n", host, res.CookieCount)

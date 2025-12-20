@@ -9,7 +9,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/steipete/foodcli/internal/firebase"
+	"github.com/steipete/ordercli/internal/firebase"
 )
 
 type resolvedSecret struct {
@@ -20,8 +20,9 @@ type resolvedSecret struct {
 }
 
 func (s *state) resolveClientSecret(ctx context.Context, clientID string) (resolvedSecret, error) {
+	cfg := s.foodora()
 	if clientID == "" {
-		clientID = strings.TrimSpace(s.cfg.OAuthClientID)
+		clientID = strings.TrimSpace(cfg.OAuthClientID)
 	}
 	if clientID == "" {
 		clientID = "android"
@@ -29,11 +30,11 @@ func (s *state) resolveClientSecret(ctx context.Context, clientID string) (resol
 
 	// Only reuse cached secrets when we know which client_id they belong to.
 	// Legacy configs may have a stored secret without oauth_client_id; assume that is for android only.
-	if s.cfg.ClientSecret != "" && strings.EqualFold(strings.TrimSpace(s.cfg.OAuthClientID), clientID) {
-		return resolvedSecret{Secret: s.cfg.ClientSecret, FromConfig: true}, nil
+	if cfg.ClientSecret != "" && strings.EqualFold(strings.TrimSpace(cfg.OAuthClientID), clientID) {
+		return resolvedSecret{Secret: cfg.ClientSecret, FromConfig: true}, nil
 	}
-	if s.cfg.ClientSecret != "" && strings.TrimSpace(s.cfg.OAuthClientID) == "" && clientID == "android" {
-		return resolvedSecret{Secret: s.cfg.ClientSecret, FromConfig: true}, nil
+	if cfg.ClientSecret != "" && strings.TrimSpace(cfg.OAuthClientID) == "" && clientID == "android" {
+		return resolvedSecret{Secret: cfg.ClientSecret, FromConfig: true}, nil
 	}
 	if v := os.Getenv("FOODORA_CLIENT_SECRET"); v != "" {
 		return resolvedSecret{Secret: v, FromEnv: true}, nil
@@ -48,15 +49,16 @@ func (s *state) resolveClientSecret(ctx context.Context, clientID string) (resol
 	}
 
 	// Cache for next run.
-	s.cfg.ClientSecret = secret
-	s.cfg.OAuthClientID = clientID
+	cfg.ClientSecret = secret
+	cfg.OAuthClientID = clientID
 	s.markDirty()
 	return resolvedSecret{Secret: secret, FromFetch: true}, nil
 }
 
 func (s *state) forceFetchClientSecret(ctx context.Context, clientID string) (resolvedSecret, error) {
+	cfg := s.foodora()
 	if clientID == "" {
-		clientID = strings.TrimSpace(s.cfg.OAuthClientID)
+		clientID = strings.TrimSpace(cfg.OAuthClientID)
 	}
 	if clientID == "" {
 		clientID = "android"
@@ -70,29 +72,31 @@ func (s *state) forceFetchClientSecret(ctx context.Context, clientID string) (re
 		return resolvedSecret{}, errors.New("fetched empty client secret")
 	}
 
-	s.cfg.ClientSecret = secret
-	s.cfg.OAuthClientID = clientID
+	cfg.ClientSecret = secret
+	cfg.OAuthClientID = clientID
 	s.markDirty()
 	return resolvedSecret{Secret: secret, FromFetch: true}, nil
 }
 
 func (s *state) firebaseConfig() firebase.APKFirebaseConfig {
-	if strings.EqualFold(s.cfg.TargetCountryISO, "AT") {
+	cfg := s.foodora()
+	if strings.EqualFold(cfg.TargetCountryISO, "AT") {
 		return firebase.MjamAT
 	}
-	if strings.HasPrefix(strings.ToUpper(s.cfg.GlobalEntityID), "MJM_") {
+	if strings.HasPrefix(strings.ToUpper(cfg.GlobalEntityID), "MJM_") {
 		return firebase.MjamAT
 	}
-	if strings.Contains(strings.ToLower(s.cfg.BaseURL), "mj.fd-api.com") {
+	if strings.Contains(strings.ToLower(cfg.BaseURL), "mj.fd-api.com") {
 		return firebase.MjamAT
 	}
 	return firebase.NetPincerHU
 }
 
 func (s *state) remoteConfigKeyCandidates() []string {
+	cfg := s.foodora()
 	var keys []string
 
-	if u, err := url.Parse(s.cfg.BaseURL); err == nil {
+	if u, err := url.Parse(cfg.BaseURL); err == nil {
 		host := strings.ToLower(u.Hostname())
 		if strings.HasSuffix(host, ".fd-api.com") {
 			if sub := strings.Split(host, ".")[0]; sub != "" {
@@ -101,7 +105,7 @@ func (s *state) remoteConfigKeyCandidates() []string {
 		}
 	}
 
-	if iso := strings.ToUpper(strings.TrimSpace(s.cfg.TargetCountryISO)); iso != "" {
+	if iso := strings.ToUpper(strings.TrimSpace(cfg.TargetCountryISO)); iso != "" {
 		keys = append(keys, iso)
 	}
 

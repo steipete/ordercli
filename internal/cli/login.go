@@ -12,10 +12,10 @@ import (
 	"time"
 
 	"github.com/spf13/cobra"
-	"github.com/steipete/foodcli/internal/browserauth"
-	"github.com/steipete/foodcli/internal/config"
-	"github.com/steipete/foodcli/internal/foodora"
-	"github.com/steipete/foodcli/internal/version"
+	"github.com/steipete/ordercli/internal/browserauth"
+	"github.com/steipete/ordercli/internal/config"
+	"github.com/steipete/ordercli/internal/foodora"
+	"github.com/steipete/ordercli/internal/version"
 	"golang.org/x/term"
 )
 
@@ -38,22 +38,23 @@ func newLoginCmd(st *state) *cobra.Command {
 		Use:   "login",
 		Short: "Login via oauth2/token (email + password; optional MFA)",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if st.cfg.BaseURL == "" {
-				return errors.New("missing base_url (run `foodcli config set --country HU` or similar)")
+			cfg := st.foodora()
+			if cfg.BaseURL == "" {
+				return errors.New("missing base_url (run `ordercli foodora config set --country HU` or similar)")
 			}
 			if email == "" {
 				return errors.New("--email required")
 			}
 
-			if mfaToken == "" && st.cfg.PendingMfaToken != "" && strings.EqualFold(st.cfg.PendingMfaEmail, email) {
-				mfaToken = st.cfg.PendingMfaToken
+			if mfaToken == "" && cfg.PendingMfaToken != "" && strings.EqualFold(cfg.PendingMfaEmail, email) {
+				mfaToken = cfg.PendingMfaToken
 			}
-			if !cmd.Flags().Changed("otp-method") && st.cfg.PendingMfaChannel != "" {
-				otpMethod = st.cfg.PendingMfaChannel
+			if !cmd.Flags().Changed("otp-method") && cfg.PendingMfaChannel != "" {
+				otpMethod = cfg.PendingMfaChannel
 			}
 
 			if clientID == "" {
-				clientID = strings.TrimSpace(st.cfg.OAuthClientID)
+				clientID = strings.TrimSpace(cfg.OAuthClientID)
 			}
 			if clientID == "" {
 				clientID = "android"
@@ -68,8 +69,8 @@ func newLoginCmd(st *state) *cobra.Command {
 				}
 				clientSecret = sec.Secret
 			} else if storeClientSecret {
-				st.cfg.ClientSecret = clientSecret
-				st.cfg.OAuthClientID = clientID
+				cfg.ClientSecret = clientSecret
+				cfg.OAuthClientID = clientID
 				st.markDirty()
 			}
 
@@ -123,17 +124,17 @@ func newLoginCmd(st *state) *cobra.Command {
 
 				if tok.AccessToken != "" {
 					now := time.Now()
-					st.cfg.OAuthClientID = clientID
-					st.cfg.PendingMfaToken = ""
-					st.cfg.PendingMfaChannel = ""
-					st.cfg.PendingMfaEmail = ""
-					st.cfg.PendingMfaCreatedAt = time.Time{}
-					st.cfg.AccessToken = tok.AccessToken
-					st.cfg.RefreshToken = tok.RefreshToken
-					st.cfg.ExpiresAt = tok.ExpiresAt(now)
-					if st.cfg.ExpiresAt.IsZero() {
+					cfg.OAuthClientID = clientID
+					cfg.PendingMfaToken = ""
+					cfg.PendingMfaChannel = ""
+					cfg.PendingMfaEmail = ""
+					cfg.PendingMfaCreatedAt = time.Time{}
+					cfg.AccessToken = tok.AccessToken
+					cfg.RefreshToken = tok.RefreshToken
+					cfg.ExpiresAt = tok.ExpiresAt(now)
+					if cfg.ExpiresAt.IsZero() {
 						if exp, ok := config.AccessTokenExpiresAt(tok.AccessToken); ok {
-							st.cfg.ExpiresAt = exp
+							cfg.ExpiresAt = exp
 						}
 					}
 					st.markDirty()
@@ -145,19 +146,19 @@ func newLoginCmd(st *state) *cobra.Command {
 					return errors.New("login failed: missing access_token and no MFA challenge")
 				}
 
-				st.cfg.PendingMfaToken = mfa.MfaToken
-				st.cfg.PendingMfaChannel = mfa.Channel
+				cfg.PendingMfaToken = mfa.MfaToken
+				cfg.PendingMfaChannel = mfa.Channel
 				if mfa.Email != "" {
-					st.cfg.PendingMfaEmail = mfa.Email
+					cfg.PendingMfaEmail = mfa.Email
 				} else {
-					st.cfg.PendingMfaEmail = email
+					cfg.PendingMfaEmail = email
 				}
-				st.cfg.PendingMfaCreatedAt = time.Now()
+				cfg.PendingMfaCreatedAt = time.Now()
 				st.markDirty()
 
 				if !waitForOTP || !term.IsTerminal(int(os.Stdin.Fd())) {
 					fmt.Fprintf(cmd.ErrOrStderr(), "MFA triggered (%s). Check your %s. Retry with:\n", mfa.Channel, mfa.Channel)
-					fmt.Fprintf(cmd.ErrOrStderr(), "  foodcli login --email %s --otp-method %s --otp <CODE>\n", email, mfa.Channel)
+					fmt.Fprintf(cmd.ErrOrStderr(), "  ordercli foodora login --email %s --otp-method %s --otp <CODE>\n", email, mfa.Channel)
 					fmt.Fprintf(cmd.ErrOrStderr(), "rate limit reset: %ds\n", mfa.RateLimitReset)
 					return nil
 				}
@@ -206,14 +207,15 @@ func newLoginCmd(st *state) *cobra.Command {
 }
 
 func oauthPassword(ctx context.Context, st *state, cmd *cobra.Command, browser bool, req foodora.OAuthPasswordRequest) (foodora.AuthToken, *foodora.MfaChallenge, error) {
+	cfg := st.foodora()
 	if browser {
 		profileDir := strings.TrimSpace(cmd.Flag("browser-profile").Value.String())
 		if profileDir == "" {
 			profileDir = filepath.Join(filepath.Dir(st.configPath), "browser-profile")
 		}
 		tok, mfa, sess, err := browserauth.OAuthTokenPassword(ctx, req, browserauth.PasswordOptions{
-			BaseURL:   st.cfg.BaseURL,
-			DeviceID:  st.cfg.DeviceID,
+			BaseURL:   cfg.BaseURL,
+			DeviceID:  cfg.DeviceID,
 			Timeout:   10 * time.Minute,
 			LogWriter: cmd.ErrOrStderr(),
 			ProfileDir: func() string {
@@ -228,14 +230,14 @@ func oauthPassword(ctx context.Context, st *state, cmd *cobra.Command, browser b
 		}
 
 		if sess.CookieHeader != "" {
-			if st.cfg.CookiesByHost == nil {
-				st.cfg.CookiesByHost = map[string]string{}
+			if cfg.CookiesByHost == nil {
+				cfg.CookiesByHost = map[string]string{}
 			}
-			st.cfg.CookiesByHost[strings.ToLower(sess.Host)] = sess.CookieHeader
+			cfg.CookiesByHost[strings.ToLower(sess.Host)] = sess.CookieHeader
 			st.markDirty()
 		}
 		if sess.UserAgent != "" {
-			st.cfg.HTTPUserAgent = sess.UserAgent
+			cfg.HTTPUserAgent = sess.UserAgent
 			st.markDirty()
 		}
 		return tok, mfa, nil
@@ -243,19 +245,19 @@ func oauthPassword(ctx context.Context, st *state, cmd *cobra.Command, browser b
 
 	_, cookie := st.cookieHeaderForBaseURL()
 	prof := st.appHeaders()
-	ua := st.cfg.HTTPUserAgent
+	ua := cfg.HTTPUserAgent
 	if ua == "" && prof.UserAgent != "" {
 		ua = prof.UserAgent
 	}
 	if ua == "" {
-		ua = "foodcli/" + version.Version
+		ua = "ordercli/" + version.Version
 	}
 
 	c, err := foodora.New(foodora.Options{
-		BaseURL:          st.cfg.BaseURL,
-		DeviceID:         st.cfg.DeviceID,
-		GlobalEntityID:   st.cfg.GlobalEntityID,
-		TargetCountryISO: st.cfg.TargetCountryISO,
+		BaseURL:          cfg.BaseURL,
+		DeviceID:         cfg.DeviceID,
+		GlobalEntityID:   cfg.GlobalEntityID,
+		TargetCountryISO: cfg.TargetCountryISO,
 		UserAgent:        ua,
 		CookieHeader:     cookie,
 		FPAPIKey:         prof.FPAPIKey,
@@ -313,13 +315,14 @@ func newLogoutCmd(st *state) *cobra.Command {
 		Use:   "logout",
 		Short: "Forget stored tokens",
 		Run: func(cmd *cobra.Command, args []string) {
-			st.cfg.PendingMfaToken = ""
-			st.cfg.PendingMfaChannel = ""
-			st.cfg.PendingMfaEmail = ""
-			st.cfg.PendingMfaCreatedAt = time.Time{}
-			st.cfg.AccessToken = ""
-			st.cfg.RefreshToken = ""
-			st.cfg.ExpiresAt = time.Time{}
+			cfg := st.foodora()
+			cfg.PendingMfaToken = ""
+			cfg.PendingMfaChannel = ""
+			cfg.PendingMfaEmail = ""
+			cfg.PendingMfaCreatedAt = time.Time{}
+			cfg.AccessToken = ""
+			cfg.RefreshToken = ""
+			cfg.ExpiresAt = time.Time{}
 			st.markDirty()
 			fmt.Fprintln(cmd.OutOrStdout(), "ok")
 		},

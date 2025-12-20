@@ -10,9 +10,9 @@ import (
 	"time"
 
 	"github.com/spf13/cobra"
-	"github.com/steipete/foodcli/internal/chromecookies"
-	"github.com/steipete/foodcli/internal/foodora"
-	"github.com/steipete/foodcli/internal/version"
+	"github.com/steipete/ordercli/internal/chromecookies"
+	"github.com/steipete/ordercli/internal/foodora"
+	"github.com/steipete/ordercli/internal/version"
 )
 
 func newSessionCmd(st *state) *cobra.Command {
@@ -36,8 +36,9 @@ func newSessionChromeCmd(st *state) *cobra.Command {
 		Use:   "chrome",
 		Short: "Import refresh_token (+ device_token) from Chrome cookies",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if st.cfg.BaseURL == "" {
-				return errors.New("missing base_url (run `foodcli config set --country ...`)")
+			cfg := st.foodora()
+			if cfg.BaseURL == "" {
+				return errors.New("missing base_url (run `ordercli foodora config set --country ...`)")
 			}
 			if strings.TrimSpace(url) == "" {
 				u, ok := defaultWebURLForConfig(st)
@@ -73,31 +74,31 @@ func newSessionChromeCmd(st *state) *cobra.Command {
 			}
 
 			if cid := strings.TrimSpace(forceClientID); cid != "" {
-				st.cfg.OAuthClientID = cid
+				cfg.OAuthClientID = cid
 			} else if access != "" {
 				if cid, ok := jwtClientID(access); ok {
-					st.cfg.OAuthClientID = cid
+					cfg.OAuthClientID = cid
 				}
-			} else if strings.TrimSpace(st.cfg.OAuthClientID) == "" {
-				st.cfg.OAuthClientID = "android"
+			} else if strings.TrimSpace(cfg.OAuthClientID) == "" {
+				cfg.OAuthClientID = "android"
 			}
 			if access != "" {
 				if exp, ok := jwtExpiry(access); ok {
-					st.cfg.ExpiresAt = time.Unix(exp, 0)
+					cfg.ExpiresAt = time.Unix(exp, 0)
 				} else {
-					st.cfg.ExpiresAt = time.Time{}
+					cfg.ExpiresAt = time.Time{}
 				}
 			}
-			st.cfg.DeviceID = deviceToken
-			st.cfg.AccessToken = access
-			st.cfg.RefreshToken = refresh
+			cfg.DeviceID = deviceToken
+			cfg.AccessToken = access
+			cfg.RefreshToken = refresh
 			if access == "" {
-				st.cfg.ExpiresAt = time.Time{}
+				cfg.ExpiresAt = time.Time{}
 			}
 			st.markDirty()
 
 			if access == "" {
-				fmt.Fprintln(cmd.OutOrStdout(), "ok (refresh_token imported; run `foodcli session refresh`)")
+				fmt.Fprintln(cmd.OutOrStdout(), "ok (refresh_token imported; run `ordercli foodora session refresh`)")
 				return nil
 			}
 			fmt.Fprintln(cmd.OutOrStdout(), "ok")
@@ -120,19 +121,20 @@ func newSessionRefreshCmd(st *state) *cobra.Command {
 		Use:   "refresh",
 		Short: "Refresh access token (uses stored refresh_token)",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if st.cfg.BaseURL == "" {
-				return errors.New("missing base_url (run `foodcli config set --country ...`)")
+			cfg := st.foodora()
+			if cfg.BaseURL == "" {
+				return errors.New("missing base_url (run `ordercli foodora config set --country ...`)")
 			}
-			if st.cfg.RefreshToken == "" {
-				return errors.New("missing refresh_token (run `foodcli login ...` or `foodcli session chrome ...`)")
+			if cfg.RefreshToken == "" {
+				return errors.New("missing refresh_token (run `ordercli foodora login ...` or `ordercli foodora session chrome ...`)")
 			}
 
 			clientID := strings.TrimSpace(forceClientID)
 			if clientID == "" {
-				clientID = strings.TrimSpace(st.cfg.OAuthClientID)
+				clientID = strings.TrimSpace(cfg.OAuthClientID)
 			}
 			if clientID == "" {
-				if cid, ok := jwtClientID(st.cfg.AccessToken); ok {
+				if cid, ok := jwtClientID(cfg.AccessToken); ok {
 					clientID = cid
 				}
 			}
@@ -147,19 +149,19 @@ func newSessionRefreshCmd(st *state) *cobra.Command {
 
 			_, cookie := st.cookieHeaderForBaseURL()
 			prof := st.appHeaders()
-			ua := st.cfg.HTTPUserAgent
+			ua := cfg.HTTPUserAgent
 			if ua == "" && prof.UserAgent != "" {
 				ua = prof.UserAgent
 			}
 			if ua == "" {
-				ua = "foodcli/" + version.Version
+				ua = "ordercli/" + version.Version
 			}
 
 			c, err := foodora.New(foodora.Options{
-				BaseURL:          st.cfg.BaseURL,
-				DeviceID:         st.cfg.DeviceID,
-				GlobalEntityID:   st.cfg.GlobalEntityID,
-				TargetCountryISO: st.cfg.TargetCountryISO,
+				BaseURL:          cfg.BaseURL,
+				DeviceID:         cfg.DeviceID,
+				GlobalEntityID:   cfg.GlobalEntityID,
+				TargetCountryISO: cfg.TargetCountryISO,
 				UserAgent:        ua,
 				CookieHeader:     cookie,
 				FPAPIKey:         prof.FPAPIKey,
@@ -177,14 +179,14 @@ func newSessionRefreshCmd(st *state) *cobra.Command {
 
 			now := time.Now()
 			tok, err := c.OAuthTokenRefresh(cmd.Context(), foodora.OAuthRefreshRequest{
-				RefreshToken: st.cfg.RefreshToken,
+				RefreshToken: cfg.RefreshToken,
 				ClientSecret: sec.Secret,
 				ClientID:     clientID,
 			})
 			if err != nil && isInvalidClientErr(err) {
 				if sec2, ferr := st.forceFetchClientSecret(cmd.Context(), clientID); ferr == nil {
 					tok, err = c.OAuthTokenRefresh(cmd.Context(), foodora.OAuthRefreshRequest{
-						RefreshToken: st.cfg.RefreshToken,
+						RefreshToken: cfg.RefreshToken,
 						ClientSecret: sec2.Secret,
 						ClientID:     clientID,
 					})
@@ -194,17 +196,17 @@ func newSessionRefreshCmd(st *state) *cobra.Command {
 				return err
 			}
 
-			st.cfg.AccessToken = tok.AccessToken
+			cfg.AccessToken = tok.AccessToken
 			if tok.RefreshToken != "" {
-				st.cfg.RefreshToken = tok.RefreshToken
+				cfg.RefreshToken = tok.RefreshToken
 			}
-			st.cfg.ExpiresAt = tok.ExpiresAt(now)
-			if st.cfg.ExpiresAt.IsZero() {
-				if exp, ok := st.cfg.AccessTokenExpiresAt(); ok {
-					st.cfg.ExpiresAt = exp
+			cfg.ExpiresAt = tok.ExpiresAt(now)
+			if cfg.ExpiresAt.IsZero() {
+				if exp, ok := cfg.AccessTokenExpiresAt(); ok {
+					cfg.ExpiresAt = exp
 				}
 			}
-			st.cfg.OAuthClientID = clientID
+			cfg.OAuthClientID = clientID
 			st.markDirty()
 			fmt.Fprintln(cmd.OutOrStdout(), "ok")
 			return nil
@@ -216,7 +218,7 @@ func newSessionRefreshCmd(st *state) *cobra.Command {
 }
 
 func defaultWebURLForConfig(st *state) (string, bool) {
-	if strings.EqualFold(st.cfg.TargetCountryISO, "AT") {
+	if strings.EqualFold(st.foodora().TargetCountryISO, "AT") {
 		return "https://www.foodora.at/", true
 	}
 	return "", false

@@ -12,10 +12,11 @@ func TestLoadSaveRoundtrip(t *testing.T) {
 	path := filepath.Join(dir, "config.json")
 
 	cfg := New()
-	cfg.BaseURL = "https://hu.fd-api.com/api/v5/"
-	cfg.AccessToken = "a"
-	cfg.RefreshToken = "r"
-	cfg.ExpiresAt = time.Unix(123, 0).UTC()
+	fc := cfg.Foodora()
+	fc.BaseURL = "https://hu.fd-api.com/api/v5/"
+	fc.AccessToken = "a"
+	fc.RefreshToken = "r"
+	fc.ExpiresAt = time.Unix(123, 0).UTC()
 
 	if err := Save(path, cfg); err != nil {
 		t.Fatalf("save: %v", err)
@@ -30,10 +31,11 @@ func TestLoadSaveRoundtrip(t *testing.T) {
 	if err != nil {
 		t.Fatalf("load: %v", err)
 	}
-	if got.BaseURL != cfg.BaseURL || got.AccessToken != "a" || got.RefreshToken != "r" {
+	gotfc := got.Foodora()
+	if gotfc.BaseURL != fc.BaseURL || gotfc.AccessToken != "a" || gotfc.RefreshToken != "r" {
 		t.Fatalf("unexpected cfg: %#v", got)
 	}
-	if got.DeviceID == "" {
+	if gotfc.DeviceID == "" {
 		t.Fatalf("expected device id")
 	}
 }

@@ -7,7 +7,7 @@ import (
 	"time"
 )
 
-func (c Config) AccessTokenExpiresAt() (time.Time, bool) {
+func (c FoodoraConfig) AccessTokenExpiresAt() (time.Time, bool) {
 	return AccessTokenExpiresAt(c.AccessToken)
 }
 

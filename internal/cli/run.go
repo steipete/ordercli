@@ -23,8 +23,8 @@ func newRoot() *cobra.Command {
 	var cfgPath string
 
 	cmd := &cobra.Command{
-		Use:   "foodcli",
-		Short: "foodora order status CLI",
+		Use:   "ordercli",
+		Short: "multi-provider order CLI",
 	}
 	cmd.PersistentFlags().StringVar(&cfgPath, "config", "", "config path (default: OS config dir)")
 
@@ -37,15 +37,8 @@ func newRoot() *cobra.Command {
 		return st.save()
 	}
 
-	cmd.AddCommand(newCountriesCmd(st))
-	cmd.AddCommand(newConfigCmd(st))
-	cmd.AddCommand(newCookiesCmd(st))
-	cmd.AddCommand(newSessionCmd(st))
-	cmd.AddCommand(newLoginCmd(st))
-	cmd.AddCommand(newLogoutCmd(st))
-	cmd.AddCommand(newOrdersCmd(st))
-	cmd.AddCommand(newHistoryCmd(st))
-	cmd.AddCommand(newOrderCmd(st))
+	cmd.AddCommand(newFoodoraCmd(st))
+	cmd.AddCommand(newDeliverooCmd(st))
 
 	return cmd
 }

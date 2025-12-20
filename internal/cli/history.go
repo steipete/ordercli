@@ -5,7 +5,7 @@ import (
 	"time"
 
 	"github.com/spf13/cobra"
-	"github.com/steipete/foodcli/internal/foodora"
+	"github.com/steipete/ordercli/internal/foodora"
 )
 
 func newHistoryCmd(st *state) *cobra.Command {

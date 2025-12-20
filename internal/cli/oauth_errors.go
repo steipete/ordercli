@@ -5,7 +5,7 @@ import (
 	"errors"
 	"strings"
 
-	"github.com/steipete/foodcli/internal/foodora"
+	"github.com/steipete/ordercli/internal/foodora"
 )
 
 func isInvalidClientErr(err error) bool {

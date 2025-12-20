@@ -45,7 +45,7 @@ type Options struct {
 
 func New(opts Options) (*Client, error) {
 	if opts.BaseURL == "" {
-		return nil, errors.New("base URL not set (run `foodcli config set ...`)")
+		return nil, errors.New("base URL not set (run `ordercli foodora config set ...`)")
 	}
 	u, err := url.Parse(opts.BaseURL)
 	if err != nil {
@@ -57,7 +57,7 @@ func New(opts Options) (*Client, error) {
 
 	ua := opts.UserAgent
 	if ua == "" {
-		ua = "foodcli"
+		ua = "ordercli"
 	}
 
 	return &Client{

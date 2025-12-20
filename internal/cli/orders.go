@@ -8,9 +8,9 @@ import (
 	"time"
 
 	"github.com/spf13/cobra"
-	"github.com/steipete/foodcli/internal/config"
-	"github.com/steipete/foodcli/internal/foodora"
-	"github.com/steipete/foodcli/internal/version"
+	"github.com/steipete/ordercli/internal/config"
+	"github.com/steipete/ordercli/internal/foodora"
+	"github.com/steipete/ordercli/internal/version"
 )
 
 func newOrdersCmd(st *state) *cobra.Command {
@@ -72,29 +72,30 @@ func newOrderCmd(st *state) *cobra.Command {
 }
 
 func newAuthedClient(st *state) (*foodora.Client, error) {
-	if st.cfg.BaseURL == "" {
-		return nil, errors.New("missing base_url (run `foodcli config set --country ...`)")
+	cfg := st.foodora()
+	if cfg.BaseURL == "" {
+		return nil, errors.New("missing base_url (run `ordercli foodora config set --country ...`)")
 	}
-	if !st.cfg.HasSession() {
-		return nil, errors.New("not logged in (run `foodcli login ...`)")
+	if !cfg.HasSession() {
+		return nil, errors.New("not logged in (run `ordercli foodora login ...`)")
 	}
 
 	_, cookie := st.cookieHeaderForBaseURL()
 	prof := st.appHeaders()
-	ua := st.cfg.HTTPUserAgent
+	ua := cfg.HTTPUserAgent
 	if ua == "" && prof.UserAgent != "" {
 		ua = prof.UserAgent
 	}
 	if ua == "" {
-		ua = "foodcli/" + version.Version
+		ua = "ordercli/" + version.Version
 	}
 
 	c, err := foodora.New(foodora.Options{
-		BaseURL:          st.cfg.BaseURL,
-		DeviceID:         st.cfg.DeviceID,
-		GlobalEntityID:   st.cfg.GlobalEntityID,
-		TargetCountryISO: st.cfg.TargetCountryISO,
-		AccessToken:      st.cfg.AccessToken,
+		BaseURL:          cfg.BaseURL,
+		DeviceID:         cfg.DeviceID,
+		GlobalEntityID:   cfg.GlobalEntityID,
+		TargetCountryISO: cfg.TargetCountryISO,
+		AccessToken:      cfg.AccessToken,
 		UserAgent:        ua,
 		CookieHeader:     cookie,
 		FPAPIKey:         prof.FPAPIKey,
@@ -111,34 +112,34 @@ func newAuthedClient(st *state) (*foodora.Client, error) {
 	}
 
 	now := time.Now()
-	if st.cfg.TokenLikelyExpired(now) {
-		sec, err := st.resolveClientSecret(context.Background(), st.cfg.OAuthClientID)
+	if cfg.TokenLikelyExpired(now) {
+		sec, err := st.resolveClientSecret(context.Background(), cfg.OAuthClientID)
 		if err != nil {
 			return nil, err
 		}
 		tok, err := c.OAuthTokenRefresh(context.Background(), foodora.OAuthRefreshRequest{
-			RefreshToken: st.cfg.RefreshToken,
+			RefreshToken: cfg.RefreshToken,
 			ClientSecret: sec.Secret,
-			ClientID:     st.cfg.OAuthClientID,
+			ClientID:     cfg.OAuthClientID,
 		})
 		if err != nil && isInvalidClientErr(err) {
-			if sec2, ferr := st.forceFetchClientSecret(context.Background(), st.cfg.OAuthClientID); ferr == nil {
+			if sec2, ferr := st.forceFetchClientSecret(context.Background(), cfg.OAuthClientID); ferr == nil {
 				tok, err = c.OAuthTokenRefresh(context.Background(), foodora.OAuthRefreshRequest{
-					RefreshToken: st.cfg.RefreshToken,
+					RefreshToken: cfg.RefreshToken,
 					ClientSecret: sec2.Secret,
-					ClientID:     st.cfg.OAuthClientID,
+					ClientID:     cfg.OAuthClientID,
 				})
 			}
 		}
 		if err != nil {
 			return nil, err
 		}
-		st.cfg.AccessToken = tok.AccessToken
-		st.cfg.RefreshToken = tok.RefreshToken
-		st.cfg.ExpiresAt = tok.ExpiresAt(now)
-		if st.cfg.ExpiresAt.IsZero() {
+		cfg.AccessToken = tok.AccessToken
+		cfg.RefreshToken = tok.RefreshToken
+		cfg.ExpiresAt = tok.ExpiresAt(now)
+		if cfg.ExpiresAt.IsZero() {
 			if exp, ok := config.AccessTokenExpiresAt(tok.AccessToken); ok {
-				st.cfg.ExpiresAt = exp
+				cfg.ExpiresAt = exp
 			}
 		}
 		st.markDirty()

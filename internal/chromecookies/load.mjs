@@ -5,12 +5,17 @@ import { existsSync } from 'node:fs';
 import { setTimeout as sleep } from 'node:timers/promises';
 
 function outputPath() {
-  return process.env.FOODCLI_OUTPUT_PATH || process.env.FOODORACLI_OUTPUT_PATH || '';
+  return (
+    process.env.ORDERCLI_OUTPUT_PATH ||
+    process.env.FOODCLI_OUTPUT_PATH ||
+    process.env.FOODORACLI_OUTPUT_PATH ||
+    ''
+  );
 }
 
 async function writeOutput(obj) {
   const out = outputPath();
-  if (!out) throw new Error('FOODCLI_OUTPUT_PATH missing');
+  if (!out) throw new Error('ORDERCLI_OUTPUT_PATH missing');
   await fs.writeFile(out, JSON.stringify(obj), { encoding: 'utf8' });
 }
 
@@ -94,7 +99,7 @@ async function resolveCookieFile({ profile, explicitCookiePath }) {
 }
 
 async function ensureCookiesDirForFallback(cookieFile) {
-  const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'foodcli-cookies-secure-'));
+  const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'ordercli-cookies-secure-'));
   const target = path.join(dir, 'Cookies');
   try {
     await fs.copyFile(cookieFile, target);

@@ -11,7 +11,16 @@ import (
 )
 
 type Config struct {
-	Version          int       `json:"version"`
+	Version   int       `json:"version"`
+	Providers Providers `json:"providers,omitempty"`
+}
+
+type Providers struct {
+	Foodora   *FoodoraConfig   `json:"foodora,omitempty"`
+	Deliveroo *DeliverooConfig `json:"deliveroo,omitempty"`
+}
+
+type FoodoraConfig struct {
 	BaseURL          string    `json:"base_url"`
 	GlobalEntityID   string    `json:"global_entity_id,omitempty"`
 	TargetCountryISO string    `json:"target_country_iso,omitempty"`
@@ -31,7 +40,20 @@ type Config struct {
 	PendingMfaCreatedAt time.Time `json:"pending_mfa_created_at,omitempty"`
 }
 
+type DeliverooConfig struct {
+	Market  string `json:"market,omitempty"`
+	BaseURL string `json:"base_url,omitempty"`
+}
+
 func DefaultPath() (string, error) {
+	dir, err := os.UserConfigDir()
+	if err != nil {
+		return "", err
+	}
+	return filepath.Join(dir, "ordercli", "config.json"), nil
+}
+
+func LegacyPathFoodcli() (string, error) {
 	dir, err := os.UserConfigDir()
 	if err != nil {
 		return "", err
@@ -39,7 +61,7 @@ func DefaultPath() (string, error) {
 	return filepath.Join(dir, "foodcli", "config.json"), nil
 }
 
-func LegacyPath() (string, error) {
+func LegacyPathFoodoracli() (string, error) {
 	dir, err := os.UserConfigDir()
 	if err != nil {
 		return "", err
@@ -58,14 +80,31 @@ func Load(path string) (Config, error) {
 		return cfg, err
 	}
 
-	if err := json.Unmarshal(b, &cfg); err != nil {
+	var sniff struct {
+		Providers json.RawMessage `json:"providers"`
+	}
+	if err := json.Unmarshal(b, &sniff); err != nil {
 		return cfg, err
 	}
+
+	if len(sniff.Providers) > 0 {
+		if err := json.Unmarshal(b, &cfg); err != nil {
+			return cfg, err
+		}
+	} else {
+		var legacy FoodoraConfig
+		if err := json.Unmarshal(b, &legacy); err != nil {
+			return cfg, err
+		}
+		cfg = New()
+		cfg.Providers.Foodora = &legacy
+	}
+
 	if cfg.Version == 0 {
 		cfg.Version = 1
 	}
-	if cfg.DeviceID == "" {
-		cfg.DeviceID = newDeviceID()
+	if cfg.Providers.Foodora != nil && cfg.Providers.Foodora.DeviceID == "" {
+		cfg.Providers.Foodora.DeviceID = newDeviceID()
 	}
 	return cfg, nil
 }
@@ -74,8 +113,8 @@ func Save(path string, cfg Config) error {
 	if cfg.Version == 0 {
 		cfg.Version = 1
 	}
-	if cfg.DeviceID == "" {
-		cfg.DeviceID = newDeviceID()
+	if cfg.Providers.Foodora != nil && cfg.Providers.Foodora.DeviceID == "" {
+		cfg.Providers.Foodora.DeviceID = newDeviceID()
 	}
 
 	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
@@ -97,16 +136,32 @@ func Save(path string, cfg Config) error {
 
 func New() Config {
 	return Config{
-		Version:  1,
-		DeviceID: newDeviceID(),
+		Version: 1,
 	}
 }
 
-func (c Config) HasSession() bool {
+func (c *Config) Foodora() *FoodoraConfig {
+	if c.Providers.Foodora == nil {
+		c.Providers.Foodora = &FoodoraConfig{}
+	}
+	if c.Providers.Foodora.DeviceID == "" {
+		c.Providers.Foodora.DeviceID = newDeviceID()
+	}
+	return c.Providers.Foodora
+}
+
+func (c *Config) Deliveroo() *DeliverooConfig {
+	if c.Providers.Deliveroo == nil {
+		c.Providers.Deliveroo = &DeliverooConfig{}
+	}
+	return c.Providers.Deliveroo
+}
+
+func (c FoodoraConfig) HasSession() bool {
 	return c.AccessToken != "" && c.RefreshToken != ""
 }
 
-func (c Config) TokenLikelyExpired(now time.Time) bool {
+func (c FoodoraConfig) TokenLikelyExpired(now time.Time) bool {
 	if c.AccessToken == "" {
 		return true
 	}
