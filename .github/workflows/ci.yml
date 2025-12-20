@@ -14,7 +14,13 @@ jobs:
         with:
           go-version-file: go.mod
           cache: true
-      - run: go test ./...
+      - name: test + coverage (>= 75%)
+        run: |
+          set -euo pipefail
+          go test ./... -coverprofile=cover.out
+          total="$(go tool cover -func=cover.out | awk '/^total:/ {gsub(/%/, "", $NF); print $NF}')"
+          echo "total_coverage=${total}%"
+          awk -v c="$total" 'BEGIN { exit !(c >= 75.0) }'
 
   lint:
     runs-on: ubuntu-latest
@@ -28,4 +34,3 @@ jobs:
         with:
           version: latest
           args: --timeout=3m
-
