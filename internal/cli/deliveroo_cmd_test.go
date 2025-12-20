@@ -42,7 +42,7 @@ func TestDeliverooCLI_ConfigAndHistory(t *testing.T) {
 		t.Fatalf("unexpected out: %s", out)
 	}
 
-	out, _, err = runCLI(cfgPath, []string{"deliveroo", "orders", "--once"}, "")
+	_, _, err = runCLI(cfgPath, []string{"deliveroo", "orders", "--once"}, "")
 	if err != nil {
 		t.Fatalf("orders: %v", err)
 	}
