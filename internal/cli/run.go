@@ -39,6 +39,7 @@ func newRoot() *cobra.Command {
 
 	cmd.AddCommand(newFoodoraCmd(st))
 	cmd.AddCommand(newDeliverooCmd(st))
+	cmd.AddCommand(newGlovoCmd(st))
 
 	return cmd
 }
