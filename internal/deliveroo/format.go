@@ -2,6 +2,7 @@ package deliveroo
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
 )
 
@@ -11,8 +12,8 @@ func (o Order) Summary() string {
 	if o.ID != "" {
 		parts = append(parts, "id="+o.ID)
 	}
-	if o.OrderNumber != "" {
-		parts = append(parts, "number="+o.OrderNumber)
+	if o.OrderNumber != 0 {
+		parts = append(parts, "number="+strconv.Itoa(o.OrderNumber))
 	}
 	if o.Status != "" {
 		parts = append(parts, "status="+o.Status)
@@ -20,11 +21,11 @@ func (o Order) Summary() string {
 	if o.Restaurant != nil && o.Restaurant.Name != "" {
 		parts = append(parts, "restaurant="+o.Restaurant.Name)
 	}
-	if o.Total != nil {
+	if o.Total != "" {
 		if o.CurrencySymbol != "" {
-			parts = append(parts, fmt.Sprintf("total=%s%.2f", o.CurrencySymbol, *o.Total))
+			parts = append(parts, fmt.Sprintf("total=%s%s", o.CurrencySymbol, o.Total))
 		} else {
-			parts = append(parts, fmt.Sprintf("total=%.2f", *o.Total))
+			parts = append(parts, "total="+o.Total)
 		}
 	}
 	if o.EstimatedDeliveryAt != "" {
