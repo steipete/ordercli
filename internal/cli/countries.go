@@ -18,6 +18,7 @@ var presets = []countryPreset{
 	{Code: "SK", BaseURL: "https://sk.fd-api.com/api/v5/", GlobalEntityID: "FP_SK", TargetISO: "SK"},
 	{Code: "DL", BaseURL: "https://dl.fd-api.com/api/v5/", GlobalEntityID: "FP_DE", TargetISO: "DE"},
 	{Code: "AT", BaseURL: "https://mj.fd-api.com/api/v5/", GlobalEntityID: "MJM_AT", TargetISO: "AT"},
+	{Code: "CZ", BaseURL: "https://cz.fd-api.com/api/v5/", GlobalEntityID: "DJ_CZ", TargetISO: "CZ"},
 }
 
 func newCountriesCmd(st *state) *cobra.Command {
