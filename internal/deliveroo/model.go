@@ -7,7 +7,7 @@ type OrdersResponse struct {
 
 type Order struct {
 	ID                  string      `json:"id"`
-	OrderNumber         string      `json:"order_number"`
+	OrderNumber         int         `json:"order_number"`
 	Status              string      `json:"status"`
 	StatusTimestamp     string      `json:"status_timestamp"`
 	OrderType           string      `json:"order_type"`
@@ -15,8 +15,8 @@ type Order struct {
 	EstimatedDeliveryAt string      `json:"estimated_delivery_at"`
 	DeliveredAt         string      `json:"delivered_at"`
 	SubmittedAt         string      `json:"submitted_at"`
-	Total               *float64    `json:"total"`
-	OriginalTotal       *float64    `json:"original_total"`
+	Total               string      `json:"total"`
+	OriginalTotal       string      `json:"original_total"`
 	CurrencySymbol      string      `json:"currency_symbol"`
 	CurrencyCode        string      `json:"currency_code"`
 	Restaurant          *Restaurant `json:"restaurant"`
