@@ -45,6 +45,8 @@ func FetchPublicStatus(ctx context.Context, targetURL string, timeout time.Durat
 func ParsePublicStatus(text string) PublicStatus {
 	lines := compactLines(text)
 	out := PublicStatus{}
+	deliveryIdx := indexOf(lines, "Delivery")
+	orderDetailsIdx := indexOf(lines, "Order Details")
 
 	for _, line := range lines {
 		if strings.HasPrefix(line, "This order is for ") {
@@ -65,19 +67,47 @@ func ParsePublicStatus(text string) PublicStatus {
 		}
 	}
 
-	if idx := indexOf(lines, "Delivery"); idx != -1 {
-		if idx+1 < len(lines) {
-			out.Courier = lines[idx+1]
-		}
-		if idx+2 < len(lines) {
-			out.Transport = lines[idx+2]
-		}
-		if idx+3 < len(lines) {
-			out.Address = lines[idx+3]
+	if out.Status == "" {
+		if idx := indexOfPrefixed(lines, "This order is for "); idx != -1 {
+			end := len(lines)
+			if deliveryIdx != -1 {
+				end = deliveryIdx
+			}
+			section := lines[idx+1 : min(idx+3, end)]
+			if len(section) > 0 {
+				out.Status = section[0]
+			}
+			if len(section) > 1 && !isNoiseMarker(section[1]) {
+				out.StatusDetail = section[1]
+			}
 		}
 	}
 
-	if idx := indexOf(lines, "Order Details"); idx != -1 {
+	if deliveryIdx != -1 {
+		end := len(lines)
+		if orderDetailsIdx != -1 {
+			end = orderDetailsIdx
+		}
+		section := lines[deliveryIdx+1 : end]
+		switch len(section) {
+		case 0:
+		case 1:
+			out.Address = section[0]
+		case 2:
+			out.Courier = section[0]
+			if looksLikeAddress(section[1]) {
+				out.Address = section[1]
+			} else {
+				out.Transport = section[1]
+			}
+		default:
+			out.Courier = section[0]
+			out.Transport = section[1]
+			out.Address = section[2]
+		}
+	}
+
+	if idx := orderDetailsIdx; idx != -1 {
 		if idx+1 < len(lines) {
 			out.Restaurant = lines[idx+1]
 		}
@@ -125,6 +155,27 @@ func indexOf(lines []string, want string) int {
 		}
 	}
 	return -1
+}
+
+func indexOfPrefixed(lines []string, prefix string) int {
+	for i, line := range lines {
+		if strings.HasPrefix(line, prefix) {
+			return i
+		}
+	}
+	return -1
+}
+
+func min(a, b int) int {
+	if a < b {
+		return a
+	}
+	return b
+}
+
+func looksLikeAddress(line string) bool {
+	line = strings.TrimSpace(line)
+	return strings.Contains(line, ",") || strings.ContainsAny(line, "0123456789")
 }
 
 func isFooterMarker(line string) bool {
