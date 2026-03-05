@@ -5,9 +5,7 @@ run:
   tests: true
 
 linters:
-  disable-all: true
-  disable:
-    - errcheck
+  default: none
   enable:
     - govet
     - ineffassign
