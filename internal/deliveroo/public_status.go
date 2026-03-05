@@ -10,6 +10,7 @@ import (
 )
 
 var quantityOnlyRe = regexp.MustCompile(`^\d+\s*x$`)
+var readBrowserPageText = browserpage.ReadText
 
 type PublicStatus struct {
 	URL              string   `json:"url,omitempty"`
@@ -28,7 +29,7 @@ type PublicStatus struct {
 }
 
 func FetchPublicStatus(ctx context.Context, targetURL string, timeout time.Duration) (PublicStatus, error) {
-	res, err := browserpage.ReadText(ctx, targetURL, browserpage.Options{
+	res, err := readBrowserPageText(ctx, targetURL, browserpage.Options{
 		Timeout:  timeout,
 		Headless: true,
 	})

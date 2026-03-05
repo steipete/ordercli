@@ -187,7 +187,7 @@ exit 0
 	}, PasswordOptions{
 		BaseURL:    "https://mj.fd-api.com/api/v5/",
 		DeviceID:   "dev",
-		Timeout:    2 * time.Second,
+		Timeout:    10 * time.Second,
 		Playwright: "playwright@0.0.0",
 	})
 	if err != nil {

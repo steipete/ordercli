@@ -38,6 +38,8 @@ type scriptInput struct {
 	Headless      bool   `json:"headless"`
 }
 
+var runFetchScriptFunc = runFetchScript
+
 func ReadText(ctx context.Context, targetURL string, opts Options) (Result, error) {
 	targetURL = strings.TrimSpace(targetURL)
 	if targetURL == "" {
@@ -70,7 +72,7 @@ func ReadText(ctx context.Context, targetURL string, opts Options) (Result, erro
 	}
 	b, _ := json.Marshal(in)
 
-	out, err := runFetchScript(ctx, td, scriptPath, outPath, b, opts, pw)
+	out, err := runFetchScriptFunc(ctx, td, scriptPath, outPath, b, opts, pw)
 	if err != nil {
 		return Result{}, err
 	}
