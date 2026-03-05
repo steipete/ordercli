@@ -39,3 +39,32 @@ func (o Order) Summary() string {
 	}
 	return strings.Join(parts, " ")
 }
+
+func (s PublicStatus) DetailsString() string {
+	lines := make([]string, 0, 12+len(s.Items))
+	appendLine := func(key, value string) {
+		value = strings.TrimSpace(value)
+		if value == "" {
+			return
+		}
+		lines = append(lines, fmt.Sprintf("%s=%s", key, value))
+	}
+
+	appendLine("restaurant", s.Restaurant)
+	appendLine("order", s.OrderNumber)
+	appendLine("for", s.Customer)
+	appendLine("status", s.Status)
+	appendLine("detail", s.StatusDetail)
+	appendLine("eta", s.EstimatedArrival)
+	appendLine("courier", s.Courier)
+	appendLine("transport", s.Transport)
+	appendLine("address", s.Address)
+	appendLine("url", s.URL)
+	if len(s.Items) > 0 {
+		lines = append(lines, "items:")
+		for _, item := range s.Items {
+			lines = append(lines, "  "+item)
+		}
+	}
+	return strings.Join(lines, "\n")
+}
