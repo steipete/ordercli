@@ -18,6 +18,7 @@ type Config struct {
 type Providers struct {
 	Foodora   *FoodoraConfig   `json:"foodora,omitempty"`
 	Deliveroo *DeliverooConfig `json:"deliveroo,omitempty"`
+	Glovo     *GlovoConfig     `json:"glovo,omitempty"`
 }
 
 type FoodoraConfig struct {
@@ -43,6 +44,17 @@ type FoodoraConfig struct {
 type DeliverooConfig struct {
 	Market  string `json:"market,omitempty"`
 	BaseURL string `json:"base_url,omitempty"`
+}
+
+type GlovoConfig struct {
+	BaseURL     string  `json:"base_url,omitempty"`
+	AccessToken string  `json:"access_token,omitempty"`
+	DeviceURN   string  `json:"device_urn,omitempty"`
+	CityCode    string  `json:"city_code,omitempty"`
+	CountryCode string  `json:"country_code,omitempty"`
+	Language    string  `json:"language,omitempty"`
+	Latitude    float64 `json:"latitude,omitempty"`
+	Longitude   float64 `json:"longitude,omitempty"`
 }
 
 func DefaultPath() (string, error) {
@@ -155,6 +167,15 @@ func (c *Config) Deliveroo() *DeliverooConfig {
 		c.Providers.Deliveroo = &DeliverooConfig{}
 	}
 	return c.Providers.Deliveroo
+}
+
+func (c *Config) Glovo() *GlovoConfig {
+	if c.Providers.Glovo == nil {
+		c.Providers.Glovo = &GlovoConfig{
+			BaseURL: "https://api.glovoapp.com",
+		}
+	}
+	return c.Providers.Glovo
 }
 
 func (c FoodoraConfig) HasSession() bool {

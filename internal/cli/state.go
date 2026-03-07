@@ -17,6 +17,8 @@ func (s *state) foodora() *config.FoodoraConfig { return s.cfg.Foodora() }
 
 func (s *state) deliveroo() *config.DeliverooConfig { return s.cfg.Deliveroo() }
 
+func (s *state) glovo() *config.GlovoConfig { return s.cfg.Glovo() }
+
 func (s *state) load() error {
 	if s.configPath == "" {
 		p, err := config.DefaultPath()
