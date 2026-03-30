@@ -41,7 +41,7 @@ go build ./cmd/ordercli
 
 Foodora CZ vyžaduje `client_secret` a `client_id: iphone`. Přihlášení probíhá přes SMS OTP.
 ```sh
-export FOODORA_CLIENT_SECRET='J7HNDia3f0paaJpXUadW8vi3rFKnYj48797QIF4HiYLF74aqoE'
+export FOODORA_CLIENT_SECRET='ZDE_VLOZ_SVUJ_CLIENT_SECRET'
 ./ordercli foodora login \
   --email tvuj@email.cz \
   --client-id iphone \
