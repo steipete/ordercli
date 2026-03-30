@@ -1,164 +1,117 @@
-# 🛵 ordercli — Your takeout timeline, in the terminal.
+# 🛵 ordercli — Historie objednávek v terminálu
 
-Providers:
-- `foodora` (working)
-- `deliveroo` (work in progress; requires `DELIVEROO_BEARER_TOKEN`)
+Fork [steipete/ordercli](https://github.com/steipete/ordercli) s přidanou podporou pro **Českou republiku (Foodora CZ)**.
 
-Concepts (shared CLI UX; provider-specific implementations):
-- `history` (past orders)
-- `orders` (active orders)
-- `order` / `history show` (details)
+Podporované platformy:
+- `foodora` (funkční) — HU, SK, DE, AT, **CZ** ✅
+- `deliveroo` (rozpracováno; vyžaduje `DELIVEROO_BEARER_TOKEN`)
 
-Config lives in your OS config dir by default; override for testing:
+Dostupné příkazy:
+- `history` — historie objednávek
+- `orders` — aktivní objednávky
+- `order` / `history show` — detail objednávky
+- `reorder` — opakování objednávky
 
+---
+
+## Instalace
+
+### Požadavky
+
+- [Go 1.24+](https://go.dev/dl/)
+
+### Build
 ```sh
-./ordercli --config /tmp/ordercli.json foodora config show
-```
-
-## Build
-
-```sh
-go test ./...
+git clone https://github.com/Lukynnnn/ordercli.git
+cd ordercli
 go build ./cmd/ordercli
 ```
 
-## foodora
+---
 
-### Configure country / base URL
+## 🇨🇿 Návod pro Českou republiku
 
-Bundled presets (from the APK):
-
+### 1. Nastav CZ region
 ```sh
-./ordercli foodora countries
-./ordercli foodora config set --country HU
-./ordercli foodora config set --country AT
+./ordercli foodora config set --country CZ
 ./ordercli foodora config show
 ```
 
-Manual:
+### 2. Přihlášení
 
+Foodora CZ vyžaduje `client_secret` a `client_id: iphone`. Přihlášení probíhá přes SMS OTP.
 ```sh
-./ordercli foodora config set --base-url https://hu.fd-api.com/api/v5/ --global-entity-id NP_HU --target-iso HU
+export FOODORA_CLIENT_SECRET='J7HNDia3f0paaJpXUadW8vi3rFKnYj48797QIF4HiYLF74aqoE'
+./ordercli foodora login \
+  --email tvuj@email.cz \
+  --client-id iphone \
+  --password heslo \
+  --otp KOD_ZE_SMS
 ```
 
-### Login
+> ⚠️ `--otp` musíš zadat ihned po přijetí SMS — kód expiruje rychle. Nejlepší postup:
+> 1. Spusť příkaz bez `--otp` → přijde SMS
+> 2. Znovu spusť příkaz s `--otp XXXXXX`
 
-`oauth2/token` needs a `client_secret` (the app fetches it via remote config). `ordercli` auto-fetches it on first use and caches it locally.
-
-Optional override (keeps secrets out of shell history):
-
+### 3. Ověření
 ```sh
-export FOODORA_CLIENT_SECRET='...'
-./ordercli foodora login --email you@example.com --password-stdin
-```
-
-If MFA triggers and you're running in a TTY, `ordercli` prompts for the OTP code and retries automatically. Otherwise it stores the MFA token locally and prints a safe retry command (`--otp <CODE>`).
-
-### Client headers
-
-Some regions (e.g. Austria/mjam `mj.fd-api.com`) expect app-style headers like `X-FP-API-KEY` / `App-Name` / app `User-Agent`. `ordercli` uses an app-like header profile for `AT` by default.
-
-For corporate flows, you can override the OAuth `client_id`:
-
-```sh
-./ordercli foodora login --email you@example.com --client-id corp_android --password-stdin
-```
-
-### Cloudflare / bot protection
-
-Some regions (e.g. Austria/mjam `mj.fd-api.com`) may return Cloudflare HTML (`HTTP 403`) for plain Go HTTP clients.
-
-Use an interactive Playwright session (you solve the challenge in the opened browser window; no auto-bypass):
-
-```sh
-./ordercli foodora login --email you@example.com --password-stdin --browser
-```
-
-Prereqs: `node` + `npx` available. First run may download Playwright + Chromium.
-
-Tip: use a persistent profile to keep browser cookies/storage between runs (reduces re-challenges):
-
-```sh
-./ordercli foodora login --email you@example.com --password-stdin --browser --browser-profile "$HOME/Library/Application Support/ordercli/browser-profile"
-```
-
-### Import cookies from Chrome (no browser run)
-
-If you already solved bot protection / logged in in Chrome, you can import the cookies for the current `base_url` host:
-
-```sh
-./ordercli foodora cookies chrome --profile "Default"
-./ordercli foodora orders
-```
-
-If the bot cookies live on the website domain (e.g. `https://www.foodora.at/`), import from there and store them for the API host:
-
-```sh
-./ordercli foodora cookies chrome --url https://www.foodora.at/ --profile "Default"
-```
-
-If you have multiple profiles, try `--profile "Profile 1"` (or pass a profile path / Cookies DB via `--cookie-path`).
-
-### Import session from Chrome (no password)
-
-If you’re logged in on the website in Chrome, you can import `refresh_token` + `device_token` and then refresh to an API access token:
-
-```sh
-./ordercli foodora session chrome --url https://www.foodora.at/ --profile "Default"
-./ordercli foodora session refresh --client-id android
 ./ordercli foodora history
 ```
-If `session refresh` errors with “refresh token … not found”, that site session isn’t valid for your configured `base_url` (common for some regions).
 
-### Orders
+Měl bys vidět historii svých objednávek.
 
+---
+
+## Použití
 ```sh
-./ordercli foodora orders
-./ordercli foodora orders --watch
+# Historie objednávek
 ./ordercli foodora history
 ./ordercli foodora history --limit 50
+
+# Detail objednávky
 ./ordercli foodora history show <orderCode>
 ./ordercli foodora history show <orderCode> --json
-./ordercli foodora order <orderCode>
+
+# Aktivní objednávky
+./ordercli foodora orders
+./ordercli foodora orders --watch
+
+# Reorder — pouze náhled (nic neobjedná)
+./ordercli foodora reorder <orderCode>
+
+# Reorder — přidá do košíku (neodešle objednávku)
+./ordercli foodora reorder <orderCode> --confirm
+
+# Reorder s konkrétní adresou
+./ordercli foodora reorder <orderCode> --confirm --address-id <id>
+
+# Odhlášení
 ./ordercli foodora logout
 ```
 
-### Reorder (add to cart)
+---
 
-Safe default (preview only):
-
+## Ostatní regiony
 ```sh
-./ordercli foodora reorder <orderCode>
+./ordercli foodora countries
+./ordercli foodora config set --country HU
+./ordercli foodora config set --country SK
+./ordercli foodora config set --country AT
+./ordercli foodora config set --country CZ
 ```
 
-Actually call `orders/{orderCode}/reorder` (adds to cart; does not place an order):
+---
 
+## Import session z Chrome (bez hesla)
+
+Pokud jsi přihlášen na foodora.cz v Chrome:
 ```sh
-./ordercli foodora reorder <orderCode> --confirm
+./ordercli foodora cookies chrome --url https://www.foodora.cz/ --profile "Default"
+./ordercli foodora history
 ```
 
-If you have multiple saved addresses, you must pick one:
+---
 
-```sh
-./ordercli foodora reorder <orderCode> --confirm --address-id <id>
-```
+## ⚠️ Upozornění
 
-## deliveroo (WIP)
-
-`history` still requires a valid bearer token. `orders` can now fall back to a public Deliveroo status/share page from your local browser history.
-
-```sh
-export DELIVEROO_BEARER_TOKEN='...'
-export DELIVEROO_COOKIE='...' # optional
-./ordercli deliveroo config set --market uk
-./ordercli deliveroo history
-./ordercli deliveroo orders # bearer-token path if set
-./ordercli deliveroo orders --browser atlas
-./ordercli deliveroo orders --status-url 'https://deliveroo.co.uk/orders/.../status?...'
-```
-
-`orders` looks for the most recent Deliveroo status URL in Atlas or Chrome history when no bearer token is present, then renders the page in headless Chromium and extracts the order details.
-
-## Safety
-
-This talks to private APIs. Use at your own risk; rate limits / bot protection may block requests.
+Tento nástroj komunikuje s privátními API. Používej na vlastní riziko — může dojít k rate limitingu nebo zablokování.
