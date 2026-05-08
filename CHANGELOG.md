@@ -16,4 +16,5 @@
 - OAuth `--client-id` override (e.g. `corp_android`)
 - Reorder: preview by default; `orders/{orderCode}/reorder` with `--confirm` (adds to cart; address selectable)
 - Deliveroo (basic/WIP): `deliveroo history` (requires `DELIVEROO_BEARER_TOKEN`)
+- Deliveroo: accept numeric `order_number` values returned by the UK order history API.
 - Tests: reorder + redaction regressions

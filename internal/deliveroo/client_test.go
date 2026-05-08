@@ -22,7 +22,7 @@ func TestClient_OrderHistory(t *testing.T) {
 			t.Fatalf("path=%s", r.URL.Path)
 		}
 		w.Header().Set("Content-Type", "application/json")
-		_, _ = w.Write([]byte(`{"orders":[{"id":"o1","status":"delivered"}]}`))
+		_, _ = w.Write([]byte(`{"orders":[{"id":"o1","order_number":7756,"status":"delivered"}]}`))
 	}))
 	t.Cleanup(srv.Close)
 
@@ -39,7 +39,7 @@ func TestClient_OrderHistory(t *testing.T) {
 	if err != nil {
 		t.Fatalf("OrderHistory: %v", err)
 	}
-	if len(resp.Orders) != 1 || resp.Orders[0].ID != "o1" {
+	if len(resp.Orders) != 1 || resp.Orders[0].ID != "o1" || resp.Orders[0].OrderNumber != "7756" {
 		t.Fatalf("unexpected resp: %#v", resp)
 	}
 }

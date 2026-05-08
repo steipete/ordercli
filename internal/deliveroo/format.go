@@ -12,7 +12,7 @@ func (o Order) Summary() string {
 		parts = append(parts, "id="+o.ID)
 	}
 	if o.OrderNumber != "" {
-		parts = append(parts, "number="+o.OrderNumber)
+		parts = append(parts, "number="+string(o.OrderNumber))
 	}
 	if o.Status != "" {
 		parts = append(parts, "status="+o.Status)
