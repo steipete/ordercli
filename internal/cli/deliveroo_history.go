@@ -105,30 +105,55 @@ func newDeliverooHistoryCmd(st *state) *cobra.Command {
 func newDeliverooOrdersCmd(st *state) *cobra.Command {
 	var interval time.Duration
 	var once bool
+	var browser string
+	var statusURL string
+	var asJSON bool
 
 	cmd := &cobra.Command{
 		Use:     "orders",
 		Aliases: []string{"active"},
-		Short:   "List active orders (best-effort via history state=active)",
+		Short:   "List active orders",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			// Reuse history command plumbing by calling it in-process with --state active.
-			// Keep flags small for now; user can call `deliveroo history --state ...` for more control.
+			runOnce := func() error {
+				if strings.TrimSpace(os.Getenv("DELIVEROO_BEARER_TOKEN")) != "" {
+					h := newDeliverooHistoryCmd(st)
+					h.SetArgs([]string{"--state", "active"})
+					h.SetOut(cmd.OutOrStdout())
+					h.SetErr(cmd.ErrOrStderr())
+					h.SetContext(cmd.Context())
+					return h.Execute()
+				}
+
+				targetURL := strings.TrimSpace(statusURL)
+				if targetURL == "" {
+					u, err := deliverooResolveLatestStatusURL(cmd.Context(), browser)
+					if err != nil {
+						return err
+					}
+					targetURL = u
+				}
+
+				status, err := deliverooFetchPublicStatus(cmd.Context(), targetURL, 2*time.Minute)
+				if err != nil {
+					return err
+				}
+
+				if asJSON {
+					enc := json.NewEncoder(cmd.OutOrStdout())
+					enc.SetIndent("", "  ")
+					return enc.Encode(status)
+				}
+
+				fmt.Fprintln(cmd.OutOrStdout(), status.DetailsString())
+				return nil
+			}
+
 			if interval <= 0 || once {
-				h := newDeliverooHistoryCmd(st)
-				h.SetArgs([]string{"--state", "active"})
-				h.SetOut(cmd.OutOrStdout())
-				h.SetErr(cmd.ErrOrStderr())
-				h.SetContext(cmd.Context())
-				return h.Execute()
+				return runOnce()
 			}
 
 			for {
-				h := newDeliverooHistoryCmd(st)
-				h.SetArgs([]string{"--state", "active"})
-				h.SetOut(cmd.OutOrStdout())
-				h.SetErr(cmd.ErrOrStderr())
-				h.SetContext(cmd.Context())
-				if err := h.Execute(); err != nil {
+				if err := runOnce(); err != nil {
 					return err
 				}
 				time.Sleep(interval)
@@ -138,5 +163,8 @@ func newDeliverooOrdersCmd(st *state) *cobra.Command {
 
 	cmd.Flags().DurationVar(&interval, "interval", 0, "poll interval (default: once)")
 	cmd.Flags().BoolVar(&once, "once", false, "fetch once (default)")
+	cmd.Flags().StringVar(&browser, "browser", "auto", "browser history to inspect when no bearer token is set (auto, atlas, chrome)")
+	cmd.Flags().StringVar(&statusURL, "status-url", "", "explicit Deliveroo status/share URL")
+	cmd.Flags().BoolVar(&asJSON, "json", false, "print raw JSON")
 	return cmd
 }

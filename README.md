@@ -145,15 +145,19 @@ If you have multiple saved addresses, you must pick one:
 
 ## deliveroo (WIP)
 
-Requires a valid bearer token (no bypass). Optional cookie for extra auth.
+`history` still requires a valid bearer token. `orders` can now fall back to a public Deliveroo status/share page from your local browser history.
 
 ```sh
 export DELIVEROO_BEARER_TOKEN='...'
 export DELIVEROO_COOKIE='...' # optional
 ./ordercli deliveroo config set --market uk
 ./ordercli deliveroo history
-./ordercli deliveroo orders # best-effort: history --state active
+./ordercli deliveroo orders # bearer-token path if set
+./ordercli deliveroo orders --browser atlas
+./ordercli deliveroo orders --status-url 'https://deliveroo.co.uk/orders/.../status?...'
 ```
+
+`orders` looks for the most recent Deliveroo status URL in Atlas or Chrome history when no bearer token is present, then renders the page in headless Chromium and extracts the order details.
 
 ## Safety
 
