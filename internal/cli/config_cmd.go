@@ -94,7 +94,7 @@ func newConfigSetCmd(st *state) *cobra.Command {
 		},
 	}
 
-	cmd.Flags().StringVar(&country, "country", "", "country preset (HU, SK, DL, AT)")
+	cmd.Flags().StringVar(&country, "country", "", "country preset (HU, SK, DL, AT, CZ)")
 	cmd.Flags().StringVar(&baseURL, "base-url", "", "API base URL (e.g. https://hu.fd-api.com/api/v5/)")
 	cmd.Flags().StringVar(&globalEntityID, "global-entity-id", "", "X-Global-Entity-ID (e.g. NP_HU)")
 	cmd.Flags().StringVar(&targetISO, "target-iso", "", "X-Target-Country-Code-ISO (e.g. HU)")

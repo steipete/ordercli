@@ -32,6 +32,7 @@ Bundled presets (from the APK):
 ./ordercli foodora countries
 ./ordercli foodora config set --country HU
 ./ordercli foodora config set --country AT
+./ordercli foodora config set --country CZ
 ./ordercli foodora config show
 ```
 

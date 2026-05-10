@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- Add Czech Republic (`CZ`) Foodora preset using `DJ_CZ`. (`#6`, thanks `@usimic`)
+
 ## 0.1.0 (2025-12-20)
 
 - Initial CLI (`login`, `orders`, `order`, `config`, `countries`)
