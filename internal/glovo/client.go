@@ -61,7 +61,7 @@ func New(opts Options) (*Client, error) {
 
 	deviceURN := opts.DeviceURN
 	if deviceURN == "" {
-		deviceURN = "glv:device:" + newUUID()
+		deviceURN = NewDeviceURN()
 	}
 
 	sessionID := newUUID()
@@ -149,6 +149,11 @@ func newUUID() string {
 		b[8:10],
 		b[10:16],
 	)
+}
+
+// NewDeviceURN returns a Glovo device URN suitable for persisting in config.
+func NewDeviceURN() string {
+	return "glv:device:" + newUUID()
 }
 
 // getJSON performs a GET request and decodes the JSON response.

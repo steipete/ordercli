@@ -21,4 +21,5 @@
 - Reorder: preview by default; `orders/{orderCode}/reorder` with `--confirm` (adds to cart; address selectable)
 - Deliveroo (basic/WIP): `deliveroo history` (requires `DELIVEROO_BEARER_TOKEN`)
 - Deliveroo: accept numeric `order_number` values returned by the UK order history API.
+- Glovo (basic/WIP): config, token session, history, active orders, order details, cart, and profile commands
 - Tests: reorder + redaction regressions

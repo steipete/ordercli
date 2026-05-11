@@ -1,11 +1,15 @@
 package cli
 
 import (
+	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/steipete/ordercli/internal/config"
 )
 
 func TestGlovoCLI_ConfigSetAndShow(t *testing.T) {
@@ -49,24 +53,36 @@ func TestGlovoCLI_SessionCommand(t *testing.T) {
 		t.Fatalf("unexpected output: %s", out)
 	}
 
-	// Verify token is visible in config show (truncated with ...)
+	// Verify token is redacted in config show.
 	out, _, err = runCLI(cfgPath, []string{"glovo", "config", "show"}, "")
 	if err != nil {
 		t.Fatalf("config show: %v", err)
 	}
-	if !strings.Contains(out, "access_token=test-token-12345...") {
-		t.Fatalf("token not visible in config: %s", out)
+	if !strings.Contains(out, "access_token=***") {
+		t.Fatalf("token not redacted in config: %s", out)
+	}
+	if strings.Contains(out, "test-token-12345") {
+		t.Fatalf("token leaked in config: %s", out)
 	}
 }
 
 func TestGlovoCLI_History(t *testing.T) {
 	cfgPath := filepath.Join(t.TempDir(), "config.json")
+	var deviceURNs []string
 
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// Check path
 		if !strings.HasPrefix(r.URL.Path, "/v3/customer/orders-list") {
 			t.Errorf("unexpected path: %s", r.URL.Path)
 		}
+		if got := r.Header.Get("Authorization"); got != "Bearer test-token" {
+			t.Errorf("authorization=%q", got)
+		}
+		deviceURN := r.Header.Get("glovo-device-urn")
+		if !strings.HasPrefix(deviceURN, "glv:device:") {
+			t.Errorf("glovo-device-urn=%q", deviceURN)
+		}
+		deviceURNs = append(deviceURNs, deviceURN)
 		// Return mock order response
 		w.Header().Set("Content-Type", "application/json")
 		_, _ = w.Write([]byte(`{
@@ -104,6 +120,26 @@ func TestGlovoCLI_History(t *testing.T) {
 	}
 	if !strings.Contains(out, "10,00 EUR") {
 		t.Fatalf("price not found in output: %s", out)
+	}
+
+	// Generated device URNs should be persisted and reused across invocations.
+	out, _, err = runCLI(cfgPath, []string{"glovo", "history"}, "")
+	if err != nil {
+		t.Fatalf("history second run: %v out=%s", err, out)
+	}
+	if len(deviceURNs) != 2 || deviceURNs[0] == "" || deviceURNs[0] != deviceURNs[1] {
+		t.Fatalf("device URN not reused: %#v", deviceURNs)
+	}
+	raw, err := os.ReadFile(cfgPath)
+	if err != nil {
+		t.Fatalf("read config: %v", err)
+	}
+	var cfg config.Config
+	if err := json.Unmarshal(raw, &cfg); err != nil {
+		t.Fatalf("decode config: %v", err)
+	}
+	if cfg.Providers.Glovo == nil || cfg.Providers.Glovo.DeviceURN != deviceURNs[0] {
+		t.Fatalf("device URN not persisted: config=%#v headers=%#v", cfg.Providers.Glovo, deviceURNs)
 	}
 }
 

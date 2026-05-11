@@ -29,6 +29,10 @@ func newGlovoCmd(st *state) *cobra.Command {
 
 func newGlovoClient(st *state) (*glovo.Client, error) {
 	cfg := st.glovo()
+	if cfg.DeviceURN == "" {
+		cfg.DeviceURN = glovo.NewDeviceURN()
+		st.markDirty()
+	}
 	return glovo.New(glovo.Options{
 		BaseURL:     cfg.BaseURL,
 		AccessToken: cfg.AccessToken,
@@ -66,9 +70,12 @@ func newGlovoConfigShowCmd(st *state) *cobra.Command {
 			fmt.Fprintf(cmd.OutOrStdout(), "latitude=%v\n", cfg.Latitude)
 			fmt.Fprintf(cmd.OutOrStdout(), "longitude=%v\n", cfg.Longitude)
 			if cfg.AccessToken != "" {
-				fmt.Fprintf(cmd.OutOrStdout(), "access_token=%s...\n", cfg.AccessToken[:min(20, len(cfg.AccessToken))])
+				fmt.Fprintf(cmd.OutOrStdout(), "access_token=***\n")
 			} else {
 				fmt.Fprintf(cmd.OutOrStdout(), "access_token=(not set)\n")
+			}
+			if cfg.DeviceURN != "" {
+				fmt.Fprintf(cmd.OutOrStdout(), "device_urn=*** (stored)\n")
 			}
 		},
 	}

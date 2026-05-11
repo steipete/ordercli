@@ -3,6 +3,7 @@
 Providers:
 - `foodora` (working)
 - `deliveroo` (work in progress; requires `DELIVEROO_BEARER_TOKEN`)
+- `glovo` (work in progress; requires a browser access token)
 
 Concepts (shared CLI UX; provider-specific implementations):
 - `history` (past orders)
@@ -159,6 +160,23 @@ export DELIVEROO_COOKIE='...' # optional
 ```
 
 `orders` looks for the most recent Deliveroo status URL in Atlas or Chrome history when no bearer token is present, then renders the page in headless Chromium and extracts the order details.
+
+## glovo (WIP)
+
+Requires a valid Glovo browser access token. The CLI stores the token redacted in
+`config show` and persists one generated Glovo device URN for repeat requests.
+
+```sh
+./ordercli glovo config set --city-code MAD --country-code ES --language en
+./ordercli glovo config set --lat 40.4168 --lon -3.7038
+./ordercli glovo session '<access_token>'
+./ordercli glovo history
+./ordercli glovo order <orderID>
+./ordercli glovo orders
+./ordercli glovo cart
+./ordercli glovo me
+./ordercli glovo logout
+```
 
 ## Safety
 
