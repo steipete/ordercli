@@ -196,3 +196,105 @@ func TestGlovoCLI_MissingToken(t *testing.T) {
 		t.Fatalf("expected error when token missing")
 	}
 }
+
+func TestGlovoCLI_ConfigSetRequiresAChange(t *testing.T) {
+	cfgPath := filepath.Join(t.TempDir(), "config.json")
+
+	_, _, err := runCLI(cfgPath, []string{"glovo", "config", "set"}, "")
+	if err == nil || !strings.Contains(err.Error(), "nothing to set") {
+		t.Fatalf("err=%v", err)
+	}
+}
+
+func TestGlovoCLI_OrderOrdersCartAndLogout(t *testing.T) {
+	cfgPath := filepath.Join(t.TempDir(), "config.json")
+	courier := "Rider One"
+
+	mux := http.NewServeMux()
+	mux.HandleFunc("/v3/customer/orders-list", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{
+			"pagination": {"currentLimit": 50},
+			"orders": [{
+				"orderId": 777,
+				"orderUrn": "glv:order:777",
+				"content": {"title": "Pizza Place", "body": [{"type": "TEXT", "data": "1 x Pizza\n1 x Soda"}]},
+				"footer": {"left": {"type": "TEXT", "data": "18,50 EUR"}, "right": null},
+				"layoutType": "ACTIVE_ORDER",
+				"courierName": "` + courier + `",
+				"image": {"lightImageId": "", "darkImageId": ""}
+			}]
+		}`))
+	})
+	mux.HandleFunc("/v3/me", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"id": 42, "name": "Test User", "email": "test@example.com"}`))
+	})
+	mux.HandleFunc("/v1/authenticated/customers/42/baskets", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`[{
+			"storeId": 9,
+			"storeName": "Corner Shop",
+			"products": [{"id": 1, "name": "Water", "quantity": 3, "totalPrice": 4.5}],
+			"subTotal": 4.5,
+			"deliveryFee": 1.5,
+			"serviceFee": 0.5,
+			"total": 6.5,
+			"currency": "EUR",
+			"minOrderValue": 10,
+			"isMinOrderMet": false
+		}]`))
+	})
+	srv := httptest.NewServer(mux)
+	defer srv.Close()
+
+	if out, _, err := runCLI(cfgPath, []string{"glovo", "config", "set", "--base-url", srv.URL}, ""); err != nil {
+		t.Fatalf("config set: %v out=%s", err, out)
+	}
+	if out, _, err := runCLI(cfgPath, []string{"glovo", "session", "test-token"}, ""); err != nil {
+		t.Fatalf("session: %v out=%s", err, out)
+	}
+
+	out, _, err := runCLI(cfgPath, []string{"glovo", "order", "777"}, "")
+	if err != nil {
+		t.Fatalf("order: %v out=%s", err, out)
+	}
+	for _, want := range []string{"Order ID: 777", "Pizza Place", "18,50 EUR", courier, "1 x Pizza"} {
+		if !strings.Contains(out, want) {
+			t.Fatalf("order output missing %q: %s", want, out)
+		}
+	}
+
+	out, _, err = runCLI(cfgPath, []string{"glovo", "orders"}, "")
+	if err != nil {
+		t.Fatalf("orders: %v out=%s", err, out)
+	}
+	if !strings.Contains(out, "[777] Pizza Place") || !strings.Contains(out, "Courier: "+courier) {
+		t.Fatalf("orders output: %s", out)
+	}
+
+	out, _, err = runCLI(cfgPath, []string{"glovo", "cart"}, "")
+	if err != nil {
+		t.Fatalf("cart: %v out=%s", err, out)
+	}
+	for _, want := range []string{"Corner Shop", "3x Water", "Delivery: 1.50 EUR", "! Min order: 10.00 EUR"} {
+		if !strings.Contains(out, want) {
+			t.Fatalf("cart output missing %q: %s", want, out)
+		}
+	}
+
+	out, _, err = runCLI(cfgPath, []string{"glovo", "logout"}, "")
+	if err != nil {
+		t.Fatalf("logout: %v out=%s", err, out)
+	}
+	if !strings.Contains(out, "logged out") {
+		t.Fatalf("logout output: %s", out)
+	}
+	out, _, err = runCLI(cfgPath, []string{"glovo", "config", "show"}, "")
+	if err != nil {
+		t.Fatalf("config show: %v", err)
+	}
+	if !strings.Contains(out, "access_token=(not set)") || strings.Contains(out, "device_urn=***") {
+		t.Fatalf("logout did not clear auth/device config: %s", out)
+	}
+}
