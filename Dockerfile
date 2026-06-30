@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1.7
 
-ARG GO_VERSION=1.24
+ARG GO_VERSION=1.25
 ARG PLAYWRIGHT_VERSION=1.58.2
 
 FROM golang:${GO_VERSION}-bookworm AS build
