@@ -50,7 +50,7 @@ func ReadText(ctx context.Context, targetURL string, opts Options) (Result, erro
 	}
 	pw := strings.TrimSpace(opts.Playwright)
 	if pw == "" {
-		pw = "playwright@1.58.2"
+		pw = "playwright@1.61.1"
 	}
 
 	td, err := os.MkdirTemp("", "ordercli-browserpage-*")
@@ -127,7 +127,8 @@ func runFetchScript(ctx context.Context, td, scriptPath, outPath string, input [
 
 	cmd := exec.CommandContext(cmdCtx, "node", scriptPath) //nolint:gosec
 	cmd.Dir = td
-	cmd.Env = append(os.Environ(),
+	cmd.Env = append(
+		os.Environ(),
 		"ORDERCLI_OUTPUT_PATH="+outPath,
 		"npm_config_loglevel=error",
 	)

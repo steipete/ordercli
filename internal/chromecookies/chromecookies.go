@@ -11,11 +11,18 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 	"time"
 )
 
 //go:embed load.mjs
 var loadScript []byte
+
+// Keep the install-time overrides until chrome-cookies-secure drops its vulnerable build chain.
+const (
+	npmPackageJSON = `{"private":true,"type":"module","dependencies":{"chrome-cookies-secure":"3.0.2"},"overrides":{"tar":"7.5.20","@tootallnate/once":"2.0.1"}}`
+	npmStateFile   = ".ordercli-dependencies"
+)
 
 type Options struct {
 	TargetURL          string
@@ -99,12 +106,11 @@ type scriptOutput struct {
 var runScript = runScriptReal
 
 func ensureNpmProject(ctx context.Context, dir string, logWriter io.Writer) error {
-	nodeModules := filepath.Join(dir, "node_modules", "chrome-cookies-secure", "package.json")
-	if _, err := os.Stat(nodeModules); err == nil {
+	if npmProjectCurrent(dir) {
 		return nil
 	}
 
-	pkg := []byte("{\"private\":true,\"type\":\"module\",\"dependencies\":{\"chrome-cookies-secure\":\"3.0.0\"}}\n")
+	pkg := []byte(npmPackageJSON + "\n")
 	if err := os.WriteFile(filepath.Join(dir, "package.json"), pkg, 0o600); err != nil {
 		return err
 	}
@@ -120,11 +126,77 @@ func ensureNpmProject(ctx context.Context, dir string, logWriter io.Writer) erro
 	} else {
 		install.Stderr = io.Discard
 	}
-	install.Env = append(os.Environ(),
+	install.Env = append(
+		os.Environ(),
 		"npm_config_loglevel=error",
 	)
 	if err := install.Run(); err != nil {
 		return fmt.Errorf("chromecookies: npm install chrome-cookies-secure: %w", err)
+	}
+	if err := verifyInstalledNpmDependencies(dir); err != nil {
+		return err
+	}
+	if err := os.WriteFile(filepath.Join(dir, npmStateFile), []byte(npmPackageJSON+"\n"), 0o600); err != nil {
+		return fmt.Errorf("chromecookies: write dependency state: %w", err)
+	}
+	return nil
+}
+
+func npmProjectCurrent(dir string) bool {
+	pkg, err := os.ReadFile(filepath.Join(dir, "package.json"))
+	if err != nil || strings.TrimSpace(string(pkg)) != npmPackageJSON {
+		return false
+	}
+	state, err := os.ReadFile(filepath.Join(dir, npmStateFile))
+	if err != nil || strings.TrimSpace(string(state)) != npmPackageJSON {
+		return false
+	}
+	_, err = os.Stat(filepath.Join(dir, "node_modules", "chrome-cookies-secure", "package.json"))
+	return err == nil
+}
+
+func verifyInstalledNpmDependencies(dir string) error {
+	required := map[string]string{
+		"chrome-cookies-secure": "3.0.2",
+		"tar":                   "7.5.20",
+		"@tootallnate/once":     "2.0.1",
+	}
+	seen := make(map[string]bool, len(required))
+	err := filepath.WalkDir(filepath.Join(dir, "node_modules"), func(path string, entry os.DirEntry, walkErr error) error {
+		if walkErr != nil {
+			return walkErr
+		}
+		if entry.IsDir() || entry.Name() != "package.json" {
+			return nil
+		}
+		data, err := os.ReadFile(path)
+		if err != nil {
+			return err
+		}
+		var pkg struct {
+			Name    string `json:"name"`
+			Version string `json:"version"`
+		}
+		if err := json.Unmarshal(data, &pkg); err != nil {
+			return nil
+		}
+		want, ok := required[pkg.Name]
+		if !ok {
+			return nil
+		}
+		if pkg.Version != want {
+			return fmt.Errorf("chromecookies: installed %s version %s, want %s", pkg.Name, pkg.Version, want)
+		}
+		seen[pkg.Name] = true
+		return nil
+	})
+	if err != nil {
+		return fmt.Errorf("chromecookies: verify npm dependencies: %w", err)
+	}
+	for name := range required {
+		if !seen[name] {
+			return fmt.Errorf("chromecookies: installed dependency %s missing", name)
+		}
 	}
 	return nil
 }
@@ -142,7 +214,8 @@ func runScriptReal(ctx context.Context, cacheDir, scriptPath, outPath string, in
 
 	cmd := exec.CommandContext(cmdCtx, "node", scriptPath) //nolint:gosec
 	cmd.Dir = cacheDir
-	cmd.Env = append(os.Environ(),
+	cmd.Env = append(
+		os.Environ(),
 		"ORDERCLI_OUTPUT_PATH="+outPath,
 		"FOODCLI_OUTPUT_PATH="+outPath,
 		"FOODORACLI_OUTPUT_PATH="+outPath, // legacy
