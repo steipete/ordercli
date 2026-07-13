@@ -38,7 +38,7 @@ func TestReadText_UsesDefaultsAndDecodesResult(t *testing.T) {
 		if opts.Timeout != 2*time.Minute {
 			t.Fatalf("opts timeout=%s", opts.Timeout)
 		}
-		if playwright != "playwright@1.58.2" {
+		if playwright != "playwright@1.61.1" {
 			t.Fatalf("playwright=%q", playwright)
 		}
 		return []byte(`{"final_url":"https://example.com/final","title":"T","text":"Body"}`), nil
@@ -70,7 +70,7 @@ func TestReadText_InvalidJSON(t *testing.T) {
 func TestRunFetchScript_NodeMissing(t *testing.T) {
 	t.Setenv("PATH", "")
 
-	_, err := runFetchScript(context.Background(), t.TempDir(), "script.mjs", "out.json", nil, Options{Timeout: time.Second}, "playwright@1.58.2")
+	_, err := runFetchScript(context.Background(), t.TempDir(), "script.mjs", "out.json", nil, Options{Timeout: time.Second}, "playwright@1.61.1")
 	if err == nil || !strings.Contains(err.Error(), "node not found") {
 		t.Fatalf("err=%v", err)
 	}
@@ -84,7 +84,7 @@ func TestRunFetchScript_NpmMissing(t *testing.T) {
 	}
 	t.Setenv("PATH", binDir)
 
-	_, err := runFetchScript(context.Background(), t.TempDir(), "script.mjs", "out.json", nil, Options{Timeout: time.Second}, "playwright@1.58.2")
+	_, err := runFetchScript(context.Background(), t.TempDir(), "script.mjs", "out.json", nil, Options{Timeout: time.Second}, "playwright@1.61.1")
 	if err == nil || !strings.Contains(err.Error(), "npm not found") {
 		t.Fatalf("err=%v", err)
 	}

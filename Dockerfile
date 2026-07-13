@@ -1,7 +1,8 @@
 # syntax=docker/dockerfile:1.7
 
-ARG GO_VERSION=1.25
-ARG PLAYWRIGHT_VERSION=1.58.2
+ARG GO_VERSION=1.26
+ARG NPM_VERSION=12.0.1
+ARG PLAYWRIGHT_VERSION=1.61.1
 
 FROM golang:${GO_VERSION}-bookworm AS build
 WORKDIR /src
@@ -10,10 +11,12 @@ RUN go mod download
 COPY . .
 RUN CGO_ENABLED=0 GOOS=linux go build -trimpath -ldflags="-s -w" -o /out/ordercli ./cmd/ordercli
 
-FROM node:24-bookworm-slim
+FROM node:24.18.0-bookworm-slim
+ARG NPM_VERSION
 ARG PLAYWRIGHT_VERSION
 ENV PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
-RUN apt-get update \
+RUN npm install --global npm@${NPM_VERSION} \
+    && apt-get update \
     && apt-get install -y --no-install-recommends ca-certificates \
     && npx --yes playwright@${PLAYWRIGHT_VERSION} install --with-deps chromium \
     && rm -rf /var/lib/apt/lists/* /tmp/* \

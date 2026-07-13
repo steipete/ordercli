@@ -62,7 +62,7 @@ func OAuthTokenPassword(ctx context.Context, req foodora.OAuthPasswordRequest, o
 	}
 	pw := opts.Playwright
 	if pw == "" {
-		pw = "playwright@1.58.2"
+		pw = "playwright@1.61.1"
 	}
 
 	td, err := os.MkdirTemp("", "ordercli-browserauth-*")
@@ -222,7 +222,8 @@ func runAuthScriptReal(ctx context.Context, td, scriptPath, outPath string, inpu
 	} else {
 		install.Stderr = io.Discard
 	}
-	install.Env = append(os.Environ(),
+	install.Env = append(
+		os.Environ(),
 		"npm_config_loglevel=error",
 	)
 	if err := install.Run(); err != nil {
@@ -241,7 +242,8 @@ func runAuthScriptReal(ctx context.Context, td, scriptPath, outPath string, inpu
 	} else {
 		installBrowsers.Stderr = io.Discard
 	}
-	installBrowsers.Env = append(os.Environ(),
+	installBrowsers.Env = append(
+		os.Environ(),
 		"npm_config_loglevel=error",
 	)
 	if err := installBrowsers.Run(); err != nil {
@@ -250,7 +252,8 @@ func runAuthScriptReal(ctx context.Context, td, scriptPath, outPath string, inpu
 
 	cmd := exec.CommandContext(cmdCtx, "node", scriptPath) //nolint:gosec
 	cmd.Dir = td
-	cmd.Env = append(os.Environ(),
+	cmd.Env = append(
+		os.Environ(),
 		"ORDERCLI_OUTPUT_PATH="+outPath,
 		"FOODCLI_OUTPUT_PATH="+outPath,
 		"FOODORACLI_OUTPUT_PATH="+outPath, // legacy
