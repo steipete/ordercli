@@ -6,6 +6,8 @@ import (
 	"os"
 
 	"github.com/spf13/cobra"
+
+	"github.com/steipete/ordercli/internal/version"
 )
 
 func Run(ctx context.Context, args []string) error {
@@ -23,8 +25,9 @@ func newRoot() *cobra.Command {
 	var cfgPath string
 
 	cmd := &cobra.Command{
-		Use:   "ordercli",
-		Short: "multi-provider order CLI",
+		Use:     "ordercli",
+		Short:   "multi-provider order CLI",
+		Version: version.Version,
 	}
 	cmd.PersistentFlags().StringVar(&cfgPath, "config", "", "config path (default: OS config dir)")
 

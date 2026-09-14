@@ -1,37 +1,24 @@
 # ordercli Homebrew Release Playbook
 
-Automates the Homebrew tap update for new releases.
+The release workflow updates `steipete/homebrew-tap` automatically after GoReleaser publishes the archives. The formula installs prebuilt binaries for macOS and Linux on Intel and ARM; it does not use the source archive.
 
-## 0) Prereqs
-- Clean git tree on `main`.
-- Tagged release pushed (e.g., `v0.1.0`).
-- Tap repo at `../homebrew-tap`.
+## Automated handoff
 
-## 1) Generate formula fields
-Run:
+`.github/workflows/release.yml` dispatches `update-formula.yml` in the tap with the release tag, repository, and artifact template `{formula}_{version}_{target}.tar.gz`. `HOMEBREW_TAP_TOKEN` must have workflow access to the tap. The release job waits for the exact dispatched run and fails if the update fails.
+
+## Verify the formula
+
+Read `Formula/ordercli.rb` from the tap and confirm the version, archive URLs, and all four SHA-256 values against the release's `checksums.txt`.
+
+Refresh the local tap, then install or upgrade without removing an existing tap:
+
 ```sh
-scripts/release-homebrew.sh 0.1.0
-```
-Copy the printed `version`, `url`, and `sha256`.
-
-## 2) Update the tap
-Edit `../homebrew-tap/Formula/ordercli.rb`:
-- Set `version "X.Y.Z"`.
-- Set `url "https://github.com/steipete/ordercli/archive/refs/tags/vX.Y.Z.tar.gz"`.
-- Paste `sha256`.
-
-Commit + push in the tap repo:
-```sh
-git -C ../homebrew-tap commit -am "ordercli vX.Y.Z"
-git -C ../homebrew-tap push origin main
-```
-
-## 3) Sanity-check install
-```sh
-brew uninstall ordercli || true
-brew untap steipete/tap || true
 brew tap steipete/tap
-brew install steipete/tap/ordercli
+git -C "$(brew --repo steipete/tap)" pull --ff-only
+brew install steipete/tap/ordercli # use brew upgrade if already installed
 brew test steipete/tap/ordercli
+ordercli --version
 ordercli --help
 ```
+
+If the release assets are complete but the handoff fails, fix the reported cause and rerun only the failed Homebrew job. The legacy `scripts/release-homebrew.sh` prints source archive fields and is not used for the binary formula.

@@ -16,6 +16,15 @@ Config lives in your OS config dir by default; override for testing:
 ./ordercli --config /tmp/ordercli.json foodora config show
 ```
 
+## Install
+
+```sh
+brew install steipete/tap/ordercli
+ordercli --version
+```
+
+Prebuilt archives for macOS, Linux, and Windows are available on the [GitHub releases page](https://github.com/steipete/ordercli/releases). The macOS binaries require macOS 13 or newer.
+
 ## Build
 
 Requires Go 1.27 or newer.
