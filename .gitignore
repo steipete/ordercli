@@ -4,6 +4,7 @@
 /foodcli
 /foodoracli
 /ordercli
+/dist/
 
 # keep source under cmd/
 !cmd/

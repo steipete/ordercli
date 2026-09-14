@@ -1,0 +1,46 @@
+#!/usr/bin/env python3
+"""Reject release binaries whose deployment target differs from macOS 13."""
+
+import argparse
+import re
+import subprocess
+
+
+def check_target(load_commands):
+    targets = []
+    for block in re.split(r"(?m)^Load command \d+\s*$", load_commands)[1:]:
+        command = re.search(r"(?m)^\s*cmd (\S+)\s*$", block)
+        if not command or command[1] != "LC_BUILD_VERSION":
+            continue
+        platform = re.search(r"(?m)^\s*platform (\S+)\s*$", block)
+        if not platform or platform[1] not in ("1", "MACOS"):
+            raise ValueError("expected a macOS platform")
+        target = re.search(r"(?m)^\s*minos (\d+\.\d+(?:\.\d+)?)\s*$", block)
+        if not target or tuple(map(int, target[1].split("."))) not in ((13, 0), (13, 0, 0)):
+            raise ValueError("LC_BUILD_VERSION minos must equal documented minimum 13.0")
+        targets.append(target[1])
+    if not targets:
+        raise ValueError("missing macOS LC_BUILD_VERSION deployment target")
+    return targets
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("binary")
+    parser.add_argument("--goos", choices=("darwin", "linux", "windows"), default="darwin")
+    args = parser.parse_args()
+    if args.goos != "darwin":
+        return
+    try:
+        result = subprocess.run(
+            ["otool", "-arch", "all", "-l", args.binary],
+            check=True, capture_output=True, text=True,
+        )
+        targets = check_target(result.stdout)
+    except (OSError, subprocess.CalledProcessError, ValueError) as error:
+        raise SystemExit(f"macOS release gate failed: {error}") from error
+    print(f"{args.binary}: macOS minos {', '.join(targets)} == 13.0")
+
+
+if __name__ == "__main__":
+    main()
