@@ -23,7 +23,7 @@ brew install steipete/tap/ordercli
 ordercli --version
 ```
 
-Prebuilt archives for macOS, Linux, and Windows are available on the [GitHub releases page](https://github.com/steipete/ordercli/releases). The macOS binaries require macOS 13 or newer.
+Prebuilt archives for macOS, Linux, and Windows are available on the [GitHub releases page](https://github.com/steipete/ordercli/releases). The macOS binaries require macOS 13 or newer. Starting with v0.2.1, macOS binaries are Developer ID signed and notarized by Apple, so direct downloads pass Gatekeeper.
 
 ## Build
 
