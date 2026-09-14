@@ -1,5 +1,7 @@
 # Changelog
 
+## Unreleased
+
 ## 0.2.0 (2026-09-13)
 
 **Highlights:** Foodora gains Sweden and Czech Republic presets, Chrome cookie imports work with npm 12 native builds, and macOS binaries now require macOS 13 or newer.
