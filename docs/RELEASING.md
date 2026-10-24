@@ -4,7 +4,7 @@ summary: 'Release checklist for ordercli (GitHub release + Homebrew tap)'
 
 # Releasing ordercli
 
-Dispatch `.github/workflows/release.yml` on the current protected `main` with a SemVer `version`. The caller pins the shared Go CLI archetype at v1.11.8 (`fc49859568b3781af7663bee48c003fd987dc08b`). It builds, signs, and verifies on `xcode-27`, using Rosetta for Intel execution. Dispatches default to `dry_run: true`, which does not create tags, publish releases, or update Homebrew. Explicit publication freezes the source, creates the annotated `v<version>` tag, then publishes verified artifacts and updates `steipete/homebrew-tap`.
+Dispatch `.github/workflows/release.yml` on the current protected `main` with a SemVer `version`. The caller pins the shared Go CLI archetype at v1.11.8 (`fc49859568b3781af7663bee48c003fd987dc08b`). It builds, signs, and verifies on `xcode-27`, using Rosetta for Intel execution. Dispatches default to `dry_run: true`, which does not create tags, publish releases, or update Homebrew. Explicit publication requires an existing fleet-key signed annotated `v<version>` tag on protected-main ancestry, then publishes verified artifacts and updates `steipete/homebrew-tap`. The workflow verifies the signature against `.github/release-allowed-signers` and never creates or moves a version tag.
 
 The signing policy is `personal`: Developer ID Application: Peter Steinberger, team `Y5PE65HELJ`, identifier `com.steipete.ordercli.ordercli`. Native archives retain `ordercli_<version>_<os>_<arch>` names, tar.gz/Windows ZIP formats, and the README, license, and changelog. The release includes `checksums.txt`, `ASSET-INVENTORY.json`, `SIGNING-MANIFEST.json`, and `RELEASE-NOTES.md`; independent verifier attestations bind publication to the frozen source and exact signed bytes.
 
@@ -25,11 +25,13 @@ The release builds on macOS so the GoReleaser post-build hook can inspect each a
 ## Publish
 
 - Confirm the version does not already exist as a local/remote tag or GitHub release.
-- Dispatch `gh workflow run release.yml --ref main -f version=<version> -f dry_run=false`. The workflow owns annotated tag creation; do not create or push a tag manually. For verification only, use the current version with `-f dry_run=true`.
+- Dispatch `gh workflow run release.yml --ref main -f version=<version> -f dry_run=true` on the release-preparation merge commit and require success.
+- Create the annotated `v<version>` tag at that exact commit using the fleet release SSH key. Verify it with `git -c gpg.format=ssh -c gpg.ssh.allowedSignersFile=.github/release-allowed-signers verify-tag v<version>` before pushing; stop on any failure. Never use the local default key or move an existing version tag.
+- Dispatch `gh workflow run release.yml --ref main -f version=<version> -f dry_run=false`. The workflow requires and re-verifies the signed tag before publishing.
 - Watch the release workflow, including its Homebrew handoff, to completion.
 - The shared workflow publishes the finalized changelog section as both the release body and `RELEASE-NOTES.md`. Check it against `./scripts/release-notes v<version>`; preserve those exact notes after publication.
 
-For recovery, rerun failed jobs on the original run. The shared workflow also supports redispatch from current main with an existing annotated version tag, reusing its frozen commit; the caller's current metadata must still match that version. Inspect partial uploads before retrying and never move an existing tag or rebuild an already published release. Release credentials stay in GitHub Actions secrets.
+For recovery, rerun failed jobs on the original run. The shared workflow also supports redispatch from current main with an existing signed annotated version tag, reusing its frozen commit; the caller's current metadata must still match that version. Inspect partial uploads before retrying and never move an existing tag or rebuild an already published release. Release credentials stay in GitHub Actions secrets.
 
 ## Verify and finish
 

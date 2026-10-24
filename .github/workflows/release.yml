@@ -45,6 +45,7 @@ jobs:
       archive-files: '["CHANGELOG.md", "LICENSE", "README.md"]'
       homebrew-tap: steipete/homebrew-tap
       homebrew-formula: ordercli
+      require-signed-tag: true
       strict-checks: true
       ci-check-events: '["push", "pull_request"]'
     secrets:
