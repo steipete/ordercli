@@ -56,6 +56,34 @@ func TestRedactSensitive_JSON(t *testing.T) {
 	}
 }
 
+func TestHTTPError_NonJSONRedactsSecrets(t *testing.T) {
+	body := `oops {"access_token":"tokenSECRET","refresh_token":"refreshSECRET","client_secret":"clientSECRET","password":"pwSECRET","mfa_token":"mfaSECRET","otp":"otpSECRET","x-otp":"xotpSECRET","address":"addrSECRET"} tail`
+	spaced := `note "access_token" : "spacedSECRET"`
+	for _, raw := range []string{body, spaced} {
+		s := (&HTTPError{
+			Method:     "GET",
+			URL:        "https://example.invalid/orders",
+			StatusCode: 500,
+			Body:       []byte(raw),
+		}).Error()
+		for _, leak := range []string{"tokenSECRET", "refreshSECRET", "clientSECRET", "pwSECRET", "mfaSECRET", "otpSECRET", "xotpSECRET", "addrSECRET", "spacedSECRET"} {
+			if strings.Contains(s, leak) {
+				t.Fatalf("leaked %s in %s", leak, s)
+			}
+		}
+		if !strings.Contains(s, "***") {
+			t.Fatalf("expected redaction marker: %s", s)
+		}
+	}
+	s := (&HTTPError{Method: "GET", URL: "https://example.invalid/orders", StatusCode: 500, Body: []byte(body)}).Error()
+	t.Log(s)
+	for _, want := range []string{`"access_token":"***"`, `"x-otp":"***"`, `"address":"***"`, "oops ", " tail"} {
+		if !strings.Contains(s, want) {
+			t.Fatalf("expected %q in %s", want, s)
+		}
+	}
+}
+
 func TestHTTPError_Error_Redacts(t *testing.T) {
 	e := &HTTPError{
 		Method:     "POST",

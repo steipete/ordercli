@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Redact access tokens, OTP values, and addresses in non-JSON error text.
+
 ## 0.2.3 (2026-10-23)
 
 **Highlights:** Keep Foodora sessions usable when refresh responses omit a replacement token or a later request fails.

@@ -35,7 +35,7 @@ var sensitiveJSONKeys = map[string]struct{}{
 	"address":       {},
 }
 
-var sensitiveJSONValueRE = regexp.MustCompile(`(?i)(\"(?:access_token|refresh_token|client_secret|password|mfa_token|otp)\"\\s*:\\s*)\"[^\"]*\"`)
+var sensitiveJSONValueRE = regexp.MustCompile(`(?i)(\"(?:access_token|refresh_token|client_secret|password|mfa_token|x-otp|otp|address)\"\s*:\s*)\"[^\"]*\"`)
 
 func redactSensitive(b []byte) string {
 	if len(b) == 0 {
