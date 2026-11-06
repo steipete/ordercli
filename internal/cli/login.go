@@ -286,9 +286,17 @@ type readPasswordResult struct {
 }
 
 func readPasswordWithTimeout(ctx context.Context, timeout time.Duration) ([]byte, error) {
+	fd := int(os.Stdin.Fd())
+	state, stateErr := term.GetState(fd)
+	restore := func() {
+		if stateErr != nil {
+			return
+		}
+		_ = term.Restore(fd, state)
+	}
 	ch := make(chan readPasswordResult, 1)
 	go func() {
-		b, err := term.ReadPassword(int(os.Stdin.Fd()))
+		b, err := term.ReadPassword(fd)
 		ch <- readPasswordResult{b: b, err: err}
 	}()
 
@@ -299,6 +307,7 @@ func readPasswordWithTimeout(ctx context.Context, timeout time.Duration) ([]byte
 
 	select {
 	case <-ctx.Done():
+		restore()
 		return nil, ctx.Err()
 	case res := <-ch:
 		if res.err != nil {
@@ -306,6 +315,7 @@ func readPasswordWithTimeout(ctx context.Context, timeout time.Duration) ([]byte
 		}
 		return res.b, nil
 	case <-timer:
+		restore()
 		return nil, errors.New("timed out waiting for input")
 	}
 }
