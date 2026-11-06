@@ -98,6 +98,19 @@ async function resolveCookieFile({ profile, explicitCookiePath }) {
   return ensureCookieFile(path.join(baseDir, profileName));
 }
 
+function isOwnedCookieCopy(dir) {
+  if (!dir) return false;
+  const resolved = path.resolve(dir);
+  if (path.dirname(resolved) !== path.resolve(os.tmpdir())) return false;
+  return path.basename(resolved).startsWith('ordercli-cookies-secure-');
+}
+
+async function removeOwnedCookieCopy(dir) {
+  // Only the mkdtemp copy. Never a Chrome profile used as a fallback.
+  if (!isOwnedCookieCopy(dir)) return;
+  await fs.rm(path.resolve(dir), { recursive: true, force: true });
+}
+
 async function ensureCookiesDirForFallback(cookieFile) {
   const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'ordercli-cookies-secure-'));
   const target = path.join(dir, 'Cookies');
@@ -105,9 +118,10 @@ async function ensureCookiesDirForFallback(cookieFile) {
     await fs.copyFile(cookieFile, target);
   } catch {
     // Best-effort: chrome-cookies-secure might still open the original file.
-    return path.dirname(cookieFile);
+    await removeOwnedCookieCopy(dir);
+    return { dir: path.dirname(cookieFile), owned: false };
   }
-  return dir;
+  return { dir, owned: true };
 }
 
 async function settleWithTimeout(promise, timeoutMs, message) {
@@ -135,42 +149,47 @@ async function main() {
     profile: input.chrome_profile ? String(input.chrome_profile) : '',
     explicitCookiePath: input.explicit_cookie_path ? String(input.explicit_cookie_path) : '',
   });
-  const cookiesDir = await ensureCookiesDirForFallback(cookieFile);
+  const prepared = await ensureCookiesDirForFallback(cookieFile);
+  try {
+    const mod = await import('chrome-cookies-secure');
+    const chromeCookies = mod?.default ?? mod;
 
-  const mod = await import('chrome-cookies-secure');
-  const chromeCookies = mod?.default ?? mod;
+    const filterNames = Array.isArray(input.filter_names) ? new Set(input.filter_names.map((v) => String(v))) : null;
 
-  const filterNames = Array.isArray(input.filter_names) ? new Set(input.filter_names.map((v) => String(v))) : null;
+    const cookies = await settleWithTimeout(
+      chromeCookies.getCookiesPromised(targetUrl, 'puppeteer', prepared.dir),
+      timeoutMs,
+      `Timed out reading Chrome cookies (after ${timeoutMs} ms)`,
+    );
 
-  const cookies = await settleWithTimeout(
-    chromeCookies.getCookiesPromised(targetUrl, 'puppeteer', cookiesDir),
-    timeoutMs,
-    `Timed out reading Chrome cookies (after ${timeoutMs} ms)`,
-  );
+    const pairs = [];
+    const seen = new Set();
+    if (Array.isArray(cookies)) {
+      for (const c of cookies) {
+        const name = c?.name ? String(c.name) : '';
+        if (!name) continue;
+        if (filterNames && filterNames.size > 0 && !filterNames.has(name)) continue;
+        if (seen.has(name)) continue;
+        const value = c?.value ? String(c.value) : '';
+        if (!value) continue;
+        seen.add(name);
+        pairs.push(`${name}=${value}`);
+      }
+    }
 
-  const pairs = [];
-  const seen = new Set();
-  if (Array.isArray(cookies)) {
-    for (const c of cookies) {
-      const name = c?.name ? String(c.name) : '';
-      if (!name) continue;
-      if (filterNames && filterNames.size > 0 && !filterNames.has(name)) continue;
-      if (seen.has(name)) continue;
-      const value = c?.value ? String(c.value) : '';
-      if (!value) continue;
-      seen.add(name);
-      pairs.push(`${name}=${value}`);
+    await writeOutput({
+      cookie_header: pairs.join('; '),
+      cookie_count: pairs.length,
+      error: '',
+    });
+
+    // give fs a beat in case the parent kills us on timeout
+    await sleep(10);
+  } finally {
+    if (prepared.owned) {
+      await removeOwnedCookieCopy(prepared.dir);
     }
   }
-
-  await writeOutput({
-    cookie_header: pairs.join('; '),
-    cookie_count: pairs.length,
-    error: '',
-  });
-
-  // give fs a beat in case the parent kills us on timeout
-  await sleep(10);
 }
 
 async function readStdin() {
