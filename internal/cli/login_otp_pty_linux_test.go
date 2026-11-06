@@ -16,7 +16,7 @@ func openPTY(t *testing.T) (master *os.File, slave *os.File) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := unix.IoctlSetInt(int(master.Fd()), unix.TIOCSPTLCK, 0); err != nil {
+	if err := unix.IoctlSetPointerInt(int(master.Fd()), unix.TIOCSPTLCK, 0); err != nil {
 		_ = master.Close()
 		t.Fatal(err)
 	}
