@@ -29,7 +29,7 @@ Prebuilt archives for macOS, Linux, and Windows are available on the [GitHub rel
 
 Requires Go 1.27 or newer.
 
-The preferred build toolchain is Go 1.27.3; CI also verifies the Go 1.27.0 source minimum. macOS release checks use the Apple Silicon `xcode-27` runner, preserve the macOS 13 minimum, and execute Intel binaries under Rosetta.
+The preferred build toolchain is Go 1.27.4; CI also verifies the Go 1.27.0 source minimum. macOS release checks use the Apple Silicon `xcode-27` runner, preserve the macOS 13 minimum, and execute Intel binaries under Rosetta.
 
 ```sh
 go test ./...
@@ -124,6 +124,8 @@ If the bot cookies live on the website domain (e.g. `https://www.foodora.at/`), 
 ```
 
 If you have multiple profiles, try `--profile "Profile 1"` (or pass a profile path / Cookies DB via `--cookie-path`).
+
+Temporary cookie-database copies are removed after successful or failed imports.
 
 The cached cookie helper approves the pinned SQLite and Keychain native build scripts required by npm 12 and rebuilds them when refreshing its dependencies.
 

@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Remove temporary Chrome cookie copies after successful and failed imports. Thanks @SebTardif.
+- Redact credential and address values in malformed/non-JSON Foodora errors. Thanks @SebTardif.
+- Refresh terminal/system dependencies and build with patched Go 1.27.4.
+
 ## 0.2.3 (2026-10-23)
 
 **Highlights:** Keep Foodora sessions usable when refresh responses omit a replacement token or a later request fails.
