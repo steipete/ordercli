@@ -1,9 +1,11 @@
 # Changelog
 
-## Unreleased
+## 0.2.4 (2026-11-15)
 
-- Remove temporary Chrome cookie copies after successful and failed imports. Thanks @SebTardif.
+**Highlights:** Protect Foodora credentials and addresses in error output, and remove temporary Chrome cookie copies after imports.
+
 - Redact credential and address values in malformed/non-JSON Foodora errors. Thanks @SebTardif.
+- Remove temporary Chrome cookie copies after successful and failed imports. Thanks @SebTardif.
 - Refresh terminal/system dependencies and build with patched Go 1.27.4.
 
 ## 0.2.3 (2026-10-23)
