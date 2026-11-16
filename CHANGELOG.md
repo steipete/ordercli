@@ -1,5 +1,7 @@
 # Changelog
 
+## Unreleased
+
 ## 0.2.4 (2026-11-15)
 
 **Highlights:** Protect Foodora credentials and addresses in error output, and remove temporary Chrome cookie copies after imports.
